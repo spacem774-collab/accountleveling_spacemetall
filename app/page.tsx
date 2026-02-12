@@ -147,7 +147,7 @@ export default function Home() {
                       className="w-12 h-12 flex-shrink-0 object-contain"
                     />
                     <div className="flex-1 min-w-0">
-                      <span className="font-medium text-[#1A2F50] block truncate">{emp.user_id}</span>
+                      <span className="font-medium text-[#1A2F50] block break-words">{emp.user_id}</span>
                       <span className="text-sm text-[#1A2F50]/60">
                         {emp.companies_count} связок · {emp.league_name}
                       </span>
