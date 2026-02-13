@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getNextLeague, getProgressToNextLeague } from "@/config/league";
+import { getMonthlyPlan } from "@/config/plans";
 import { MARGIN_ACHIEVEMENTS_CATALOG, MAX_MONTHLY_BUDGET_CATALOG, MAX_MONTHLY_SALES_CATALOG } from "@/lib/achievementsCatalog";
 
 interface League {
@@ -77,17 +78,6 @@ const DEFAULT_AVATARS: Record<string, string> = {
 
 function getDefaultAvatar(userId: string): string | null {
   return DEFAULT_AVATARS[userId] ?? null;
-}
-
-/** План по продажам на текущий месяц (₽) */
-const MONTHLY_PLANS: Record<string, number> = {
-  "Ружников Дмитрий Константинович": 200_000,
-  "Кадыров Никита Дмитриевич": 150_000,
-  "Гнусарёв Евгений Андреевич": 0,
-};
-
-function getMonthlyPlan(userId: string): number {
-  return MONTHLY_PLANS[userId] ?? 0;
 }
 
 function LeagueProgressBar({

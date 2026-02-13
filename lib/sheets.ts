@@ -78,6 +78,8 @@ function parseInvoiceRow(
     paid_date: number;
     budget: number;
     purchase_amount: number;
+    company_id: number;
+    company_name: number;
   }
 ): InvoiceRow {
   const idx = (i: number | undefined, def: number) => (i != null && i >= 0 ? i : def);
@@ -89,6 +91,8 @@ function parseInvoiceRow(
   const paidIdx = idx(headerIndices?.paid_date, 5);
   const budgetIdx = headerIndices?.budget ?? -1;
   const purchaseIdx = headerIndices?.purchase_amount ?? -1;
+  const companyIdx = headerIndices?.company_id ?? -1;
+  const companyNameIdx = headerIndices?.company_name ?? -1;
 
   const amount = parseAmount(row[amtIdx]);
   const hasBudget = budgetIdx >= 0 && row[budgetIdx] != null && String(row[budgetIdx]).trim() !== "";
@@ -96,6 +100,15 @@ function parseInvoiceRow(
   const purchaseVal =
     purchaseIdx >= 0 && row[purchaseIdx] != null && String(row[purchaseIdx]).trim() !== ""
       ? parseAmount(row[purchaseIdx])
+      : undefined;
+
+  const companyId =
+    companyIdx >= 0 && row[companyIdx] != null && String(row[companyIdx]).trim() !== ""
+      ? String(row[companyIdx]).trim()
+      : undefined;
+  const companyName =
+    companyNameIdx >= 0 && row[companyNameIdx] != null && String(row[companyNameIdx]).trim() !== ""
+      ? String(row[companyNameIdx]).trim()
       : undefined;
 
   return {
@@ -108,6 +121,8 @@ function parseInvoiceRow(
     budget: budgetVal != null && !Number.isNaN(budgetVal) ? budgetVal : undefined,
     purchase_amount:
       purchaseVal != null && !Number.isNaN(purchaseVal) ? purchaseVal : undefined,
+    company_id: companyId ?? companyName,
+    company_name: companyName,
   };
 }
 
@@ -370,6 +385,8 @@ export async function fetchInvoices(): Promise<InvoiceRow[]> {
       paid_date: findColumnIndex(headers, SALES_FUNNEL_COLUMNS.paid_date),
       budget: findColumnIndex(headers, SALES_FUNNEL_COLUMNS.budget),
       purchase_amount: findColumnIndex(headers, SALES_FUNNEL_COLUMNS.purchase_amount),
+      company_id: findColumnIndex(headers, SALES_FUNNEL_COLUMNS.company_id),
+      company_name: findColumnIndex(headers, SALES_FUNNEL_COLUMNS.company_name),
     };
     const data = rows.slice(1).map((row) => parseInvoiceRow(row, headerIndices));
     invoicesCacheStore = {
@@ -412,6 +429,8 @@ export async function fetchInvoices(): Promise<InvoiceRow[]> {
       paid_date: findColumnIndex(headers, SALES_FUNNEL_COLUMNS.paid_date),
       budget: findColumnIndex(headers, SALES_FUNNEL_COLUMNS.budget),
       purchase_amount: findColumnIndex(headers, SALES_FUNNEL_COLUMNS.purchase_amount),
+      company_id: findColumnIndex(headers, SALES_FUNNEL_COLUMNS.company_id),
+      company_name: findColumnIndex(headers, SALES_FUNNEL_COLUMNS.company_name),
     };
 
     const data = rows.slice(1).map((row) => parseInvoiceRow(row, headerIndices));

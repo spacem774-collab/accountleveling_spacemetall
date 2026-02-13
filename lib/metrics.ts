@@ -41,6 +41,9 @@ export interface InvoiceRow {
   budget?: number;
   /** Сумма закупки — для расчёта маржи */
   purchase_amount?: number;
+  /** ID/название компании — для расчёта повторных продаж */
+  company_id?: string;
+  company_name?: string;
 }
 
 export interface Totals {
@@ -303,6 +306,181 @@ export function computeMonthlyStats(
     current_month_margin: current.margin,
     current_month_budget: current.budget,
     byMonth: byMonthRecord,
+  };
+}
+
+/** Общий бюджет (сумма продаж) фактически закрытых сделок в текущем месяце по всем сотрудникам. */
+export function computeTotalCurrentMonthBudget(
+  invoices: InvoiceRow[],
+  excludedUserIds: string[] = []
+): number {
+  const now = new Date();
+  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  let total = 0;
+  for (const inv of invoices) {
+    if (!isPaidDeal(inv)) continue;
+    const uid = String(inv.user_id ?? "").trim();
+    const isExcluded = excludedUserIds.some(
+      (ex) => ex && (uid.includes(ex.trim()) || ex.trim().includes(uid))
+    );
+    if (isExcluded) continue;
+    const dateStr = String(inv.paid_date ?? inv.invoice_date ?? "").trim();
+    const key = getYearMonth(dateStr || undefined);
+    if (key !== currentKey) continue;
+    total += inv.budget ?? inv.invoice_amount ?? 0;
+  }
+  return total;
+}
+
+/** Общая маржа фактически закрытых сделок в текущем месяце по всем сотрудникам (исключая excludedUserIds). */
+export function computeTotalCurrentMonthMargin(
+  invoices: InvoiceRow[],
+  excludedUserIds: string[] = []
+): number {
+  const now = new Date();
+  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  let total = 0;
+  for (const inv of invoices) {
+    if (!isPaidDeal(inv)) continue;
+    const uid = String(inv.user_id ?? "").trim();
+    const isExcluded = excludedUserIds.some(
+      (ex) => ex && (uid.includes(ex.trim()) || ex.trim().includes(uid))
+    );
+    if (isExcluded) continue;
+    const dateStr = String(inv.paid_date ?? inv.invoice_date ?? "").trim();
+    const key = getYearMonth(dateStr || undefined);
+    if (key !== currentKey) continue;
+    total += calcMarginRub(inv);
+  }
+  return total;
+}
+
+/** Общая маржа фактически закрытых сделок в предыдущем месяце по всем сотрудникам. */
+export function computeTotalPreviousMonthMargin(
+  invoices: InvoiceRow[],
+  excludedUserIds: string[] = []
+): number {
+  const now = new Date();
+  const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+  const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const prevKey = `${prevYear}-${String(prevMonth + 1).padStart(2, "0")}`;
+  let total = 0;
+  for (const inv of invoices) {
+    if (!isPaidDeal(inv)) continue;
+    const uid = String(inv.user_id ?? "").trim();
+    const isExcluded = excludedUserIds.some(
+      (ex) => ex && (uid.includes(ex.trim()) || ex.trim().includes(uid))
+    );
+    if (isExcluded) continue;
+    const dateStr = String(inv.paid_date ?? inv.invoice_date ?? "").trim();
+    const key = getYearMonth(dateStr || undefined);
+    if (key !== prevKey) continue;
+    total += calcMarginRub(inv);
+  }
+  return total;
+}
+
+/** Лучший сотрудник за конкретный месяц по марже. Возвращает { user_id, margin } или null. */
+function getBestEmployeeForMonth(
+  invoices: InvoiceRow[],
+  monthKey: string,
+  userIds: string[],
+  excludedUserIds: string[] = []
+): { user_id: string; margin: number } | null {
+  const byUser = new Map<string, number>();
+
+  for (const inv of invoices) {
+    if (!isPaidDeal(inv)) continue;
+    const uid = String(inv.user_id ?? "").trim();
+    const isExcluded = excludedUserIds.some(
+      (ex) => ex && (uid.includes(ex.trim()) || ex.trim().includes(uid))
+    );
+    if (isExcluded) continue;
+    const matchedId = userIds.find((id) => userIdMatches(id, uid));
+    if (!matchedId) continue;
+    const dateStr = String(inv.paid_date ?? inv.invoice_date ?? "").trim();
+    const key = getYearMonth(dateStr || undefined);
+    if (key !== monthKey) continue;
+    byUser.set(matchedId, (byUser.get(matchedId) ?? 0) + calcMarginRub(inv));
+  }
+
+  let best: { user_id: string; margin: number } | null = null;
+  for (const [id, margin] of byUser) {
+    if (margin > 0 && (!best || margin > best.margin)) {
+      best = { user_id: id, margin };
+    }
+  }
+  return best;
+}
+
+/** Лучший сотрудник по марже в текущем году (YTD). */
+export function getBestEmployeeByCurrentYearMargin(
+  invoices: InvoiceRow[],
+  userIds: string[],
+  excludedUserIds: string[] = []
+): { user_id: string; margin: number } | null {
+  const now = new Date();
+  const currentYear = String(now.getFullYear());
+  const byUser = new Map<string, number>();
+
+  for (const inv of invoices) {
+    if (!isPaidDeal(inv)) continue;
+    const uid = String(inv.user_id ?? "").trim();
+    const isExcluded = excludedUserIds.some(
+      (ex) => ex && (uid.includes(ex.trim()) || ex.trim().includes(uid))
+    );
+    if (isExcluded) continue;
+    const matchedId = userIds.find((id) => userIdMatches(id, uid));
+    if (!matchedId) continue;
+    const dateStr = String(inv.paid_date ?? inv.invoice_date ?? "").trim();
+    const key = getYearMonth(dateStr || undefined);
+    if (!key || !key.startsWith(currentYear)) continue;
+    byUser.set(matchedId, (byUser.get(matchedId) ?? 0) + calcMarginRub(inv));
+  }
+
+  let best: { user_id: string; margin: number } | null = null;
+  for (const [id, margin] of byUser) {
+    if (margin > 0 && (!best || margin > best.margin)) {
+      best = { user_id: id, margin };
+    }
+  }
+  return best;
+}
+
+/** Лучший сотрудник прошлого месяца + количество месяцев подряд на пьедестале. */
+export function getBestEmployeeByPreviousMonthMargin(
+  invoices: InvoiceRow[],
+  userIds: string[],
+  excludedUserIds: string[] = []
+): { user_id: string; margin: number; consecutive_months: number } | null {
+  const now = new Date();
+  const monthKeys: string[] = [];
+  for (let i = 1; i <= 24; i++) {
+    let m = now.getMonth() - i;
+    let y = now.getFullYear();
+    while (m < 0) {
+      m += 12;
+      y -= 1;
+    }
+    const key = `${y}-${String(m + 1).padStart(2, "0")}`;
+    if (key < `${ACHIEVEMENTS_MIN_YEAR}-01`) break;
+    monthKeys.push(key);
+  }
+
+  const first = getBestEmployeeForMonth(invoices, monthKeys[0], userIds, excludedUserIds);
+  if (!first) return null;
+
+  let consecutive = 1;
+  for (let i = 1; i < monthKeys.length; i++) {
+    const next = getBestEmployeeForMonth(invoices, monthKeys[i], userIds, excludedUserIds);
+    if (!next || !userIdMatches(first.user_id, next.user_id)) break;
+    consecutive += 1;
+  }
+
+  return {
+    user_id: first.user_id,
+    margin: first.margin,
+    consecutive_months: consecutive,
   };
 }
 

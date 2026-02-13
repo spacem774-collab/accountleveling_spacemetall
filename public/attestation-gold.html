@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Аттестация Gold — Воронка продаж | SpaceMETALL</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #f5f6f8;
+      --bg-card: #ffffff;
+      --border: #e2e4e8;
+      --text: #1A2F50;
+      --text-muted: rgba(26, 47, 80, 0.7);
+      --accent: #1A2F50;
+      --accent-gold: #B8860B;
+      --success: #22c55e;
+      --error: #E6004B;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Manrope', sans-serif;
+      background: var(--bg-page);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .top-header {
+      background: var(--accent);
+      padding: 1rem 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .top-header img { height: 40px; width: auto; display: block; }
+    .container { max-width: 640px; margin: 0 auto; padding: 2rem 1.5rem; flex: 1; width: 100%; }
+    .back { margin-bottom: 1.5rem; }
+    .back a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+    .back a:hover { color: var(--accent); }
+    header { text-align: center; margin-bottom: 2rem; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--accent-gold); }
+    .score-info { font-size: 0.85rem; color: var(--text-muted); }
+    .block-title {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);
+      margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+    }
+    .q-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 0 6px rgba(26, 47, 80, 0.08);
+    }
+    .q-num { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .q-text { font-weight: 600; margin-bottom: 1rem; line-height: 1.4; color: var(--text); }
+    .opts { display: flex; flex-direction: column; gap: 0.6rem; }
+    label {
+      display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;
+      padding: 0.5rem 0.5rem 0.5rem 0; border-radius: 8px;
+    }
+    label:hover { background: rgba(26, 47, 80, 0.05); }
+    input[type="radio"], input[type="checkbox"] { margin-top: 0.2rem; accent-color: var(--accent); }
+    .submit-wrap { text-align: center; margin: 2.5rem 0 1.5rem; }
+    .submit-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.9rem 2.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      box-shadow: 0 0 6px rgba(26, 47, 80, 0.2);
+    }
+    .submit-btn:hover { opacity: 0.92; }
+    .result {
+      text-align: center;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+    }
+    .result.pass { background: rgba(34, 197, 94, 0.12); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.4); }
+    .result.fail { background: rgba(230, 0, 75, 0.1); color: var(--error); border: 1px solid rgba(230, 0, 75, 0.3); }
+    .result-detail { font-size: 0.95rem; color: var(--text-muted); font-weight: 400; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <header class="top-header">
+    <a href="/"><img src="/sm-logo.png" alt="Space METALL"></a>
+  </header>
+  <div class="container">
+    <div class="back"><a href="/">← Вернуться к выбору лиги</a></div>
+    <header>
+      <h1>Аттестация — переход в Gold лигу</h1>
+      <p class="score-info">Проходной балл: 16 из 20</p>
+    </header>
+    <div class="block-title">Вопросы</div>
+    <form id="test-form">
+      <div class="q-block">
+        <div class="q-num">Вопрос 1</div>
+        <div class="q-text">Главная цель менеджера в воронке продаж [Sale] Юр. лица:</div>
+        <div class="opts">
+          <label><input type="radio" name="q1" value="Выставить счёт"> Выставить счёт</label>
+          <label><input type="radio" name="q1" value="Отправить ТКП"> Отправить ТКП</label>
+          <label><input type="radio" name="q1" value="Провести сделку до этапа «Успешно реализовано»"> Провести сделку до этапа «Успешно реализовано»</label>
+          <label><input type="radio" name="q1" value="Получить ИНН"> Получить ИНН</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 2</div>
+        <div class="q-text">В каком случае допустим переход сделки сразу на следующий этап, минуя предыдущий?</div>
+        <div class="opts">
+          <label><input type="radio" name="q2" value="Никогда"> Никогда</label>
+          <label><input type="radio" name="q2" value="Если клиент торопится"> Если клиент торопится</label>
+          <label><input type="radio" name="q2" value="Если выполнены все требования этапа: заполнены поля и сформированы документы"> Если выполнены все требования этапа: заполнены поля и сформированы документы</label>
+          <label><input type="radio" name="q2" value="Только с разрешения руководителя"> Только с разрешения руководителя</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 3</div>
+        <div class="q-text">Где зафиксирована основная логика движения сделки?</div>
+        <div class="opts">
+          <label><input type="radio" name="q3" value="В комментариях"> В комментариях</label>
+          <label><input type="radio" name="q3" value="В задачах"> В задачах</label>
+          <label><input type="radio" name="q3" value="В этапах воронки и обязательных полях сделки"> В этапах воронки и обязательных полях сделки</label>
+          <label><input type="radio" name="q3" value="В переписке"> В переписке</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 4</div>
+        <div class="q-text">Что считается ошибкой работы менеджера в воронке продаж?</div>
+        <div class="opts">
+          <label><input type="radio" name="q4" value="Долгий цикл сделки"> Долгий цикл сделки</label>
+          <label><input type="radio" name="q4" value="Возврат сделки на предыдущий этап"> Возврат сделки на предыдущий этап</label>
+          <label><input type="radio" name="q4" value="Попытка работать со сделкой, не понимая требований этапа"> Попытка работать со сделкой, не понимая требований этапа</label>
+          <label><input type="radio" name="q4" value="Закрытие сделки без продажи"> Закрытие сделки без продажи</label>
+        </div>
+      </div>
+      <div class="block-title">Этап: «Потребность → Отложенный просчёт»</div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 5 (несколько вариантов)</div>
+        <div class="q-text">Какие данные ОБЯЗАТЕЛЬНЫ для перевода сделки из этапа «Потребность» в «Отложенный просчёт»?</div>
+        <div class="opts">
+          <label><input type="checkbox" name="q5" value="ФИО контакта"> ФИО контакта</label>
+          <label><input type="checkbox" name="q5" value="Телефон"> Телефон</label>
+          <label><input type="checkbox" name="q5" value="Потребность"> Потребность</label>
+          <label><input type="checkbox" name="q5" value="Приоритет"> Приоритет</label>
+          <label><input type="checkbox" name="q5" value="Источник сделки"> Источник сделки</label>
+          <label><input type="checkbox" name="q5" value="Email"> Email</label>
+          <label><input type="checkbox" name="q5" value="Реквизиты компании"> Реквизиты компании</label>
+          <label><input type="checkbox" name="q5" value="Счёт"> Счёт</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 6</div>
+        <div class="q-text">Какой контактный параметр ОБЯЗАТЕЛЕН для движения сделки по воронке продаж?</div>
+        <div class="opts">
+          <label><input type="radio" name="q6" value="Email"> Email</label>
+          <label><input type="radio" name="q6" value="Telegram"> Telegram</label>
+          <label><input type="radio" name="q6" value="Телефон"> Телефон</label>
+          <label><input type="radio" name="q6" value="Web-сайт"> Web-сайт</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 7</div>
+        <div class="q-text">Где фиксируется поле «Приоритет» сделки?</div>
+        <div class="opts">
+          <label><input type="radio" name="q7" value="В карточке контакта"> В карточке контакта</label>
+          <label><input type="radio" name="q7" value="В карточке компании"> В карточке компании</label>
+          <label><input type="radio" name="q7" value="В карточке сделки"> В карточке сделки</label>
+          <label><input type="radio" name="q7" value="В задаче"> В задаче</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 8</div>
+        <div class="q-text">Что будет логической ошибкой на этапе «Потребность → Отложенный просчёт»?</div>
+        <div class="opts">
+          <label><input type="radio" name="q8" value="Отсутствие реквизитов компании"> Отсутствие реквизитов компании</label>
+          <label><input type="radio" name="q8" value="Отсутствие сформированного ТКП"> Отсутствие сформированного ТКП</label>
+          <label><input type="radio" name="q8" value="Отсутствие источника сделки"> Отсутствие источника сделки</label>
+          <label><input type="radio" name="q8" value="Отсутствие счёта"> Отсутствие счёта</label>
+        </div>
+      </div>
+      <div class="block-title">Этап: «ТКП отправлено»</div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 9</div>
+        <div class="q-text">Что необходимо для перехода сделки в этап «ТКП отправлено»?</div>
+        <div class="opts">
+          <label><input type="radio" name="q9" value="Заполнить потребность"> Заполнить потребность</label>
+          <label><input type="radio" name="q9" value="Заполнить обязательные поля + добавить товар + сформировать ТКП"> Заполнить обязательные поля + добавить товар + сформировать ТКП</label>
+          <label><input type="radio" name="q9" value="Получить ИНН"> Получить ИНН</label>
+          <label><input type="radio" name="q9" value="Поставить задачу"> Поставить задачу</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 10</div>
+        <div class="q-text">Где фактически формируется ТКП?</div>
+        <div class="opts">
+          <label><input type="radio" name="q10" value="В комментарии"> В комментарии</label>
+          <label><input type="radio" name="q10" value="В задачах"> В задачах</label>
+          <label><input type="radio" name="q10" value="Во вкладке «Товары»"> Во вкладке «Товары»</label>
+          <label><input type="radio" name="q10" value="Во вкладке «Документы»"> Во вкладке «Документы»</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 11</div>
+        <div class="q-text">Если товары не заполнены, можно ли сформировать ТКП?</div>
+        <div class="opts">
+          <label><input type="radio" name="q11" value="Да"> Да</label>
+          <label><input type="radio" name="q11" value="Иногда"> Иногда</label>
+          <label><input type="radio" name="q11" value="Нет"> Нет</label>
+          <label><input type="radio" name="q11" value="Только вручную"> Только вручную</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 12</div>
+        <div class="q-text">Что считается ошибкой на этапе «ТКП отправлено»?</div>
+        <div class="opts">
+          <label><input type="radio" name="q12" value="Отсутствие задачи"> Отсутствие задачи</label>
+          <label><input type="radio" name="q12" value="Отсутствие реквизитов компании"> Отсутствие реквизитов компании</label>
+          <label><input type="radio" name="q12" value="Отсутствие сформированного ТКП"> Отсутствие сформированного ТКП</label>
+          <label><input type="radio" name="q12" value="Отсутствие счёта"> Отсутствие счёта</label>
+        </div>
+      </div>
+      <div class="block-title">Этап: «Счёт отправлен»</div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 13</div>
+        <div class="q-text">Что обязательно должно быть в сделке для формирования счёта?</div>
+        <div class="opts">
+          <label><input type="radio" name="q13" value="Потребность"> Потребность</label>
+          <label><input type="radio" name="q13" value="Контакт"> Контакт</label>
+          <label><input type="radio" name="q13" value="Привязанная карточка компании с реквизитами"> Привязанная карточка компании с реквизитами</label>
+          <label><input type="radio" name="q13" value="Задача"> Задача</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 14</div>
+        <div class="q-text">Обязательна ли задача на этапе «Счёт отправлен»?</div>
+        <div class="opts">
+          <label><input type="radio" name="q14" value="Да"> Да</label>
+          <label><input type="radio" name="q14" value="Нет, задачи формируются триггерами системы"> Нет, задачи формируются триггерами системы</label>
+          <label><input type="radio" name="q14" value="Только для крупных клиентов"> Только для крупных клиентов</label>
+          <label><input type="radio" name="q14" value="По желанию менеджера"> По желанию менеджера</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 15</div>
+        <div class="q-text">Что является допустимым состоянием сделки на этапе «Счёт отправлен»?</div>
+        <div class="opts">
+          <label><input type="radio" name="q15" value="Отсутствие задачи"> Отсутствие задачи</label>
+          <label><input type="radio" name="q15" value="Отсутствие компании"> Отсутствие компании</label>
+          <label><input type="radio" name="q15" value="Отсутствие счёта"> Отсутствие счёта</label>
+          <label><input type="radio" name="q15" value="Отсутствие товаров"> Отсутствие товаров</label>
+        </div>
+      </div>
+      <div class="block-title">Этап: «Жду решения / Переговоры»</div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 16</div>
+        <div class="q-text">Что ОБЯЗАТЕЛЬНО для работы на этапе «Жду решения / Переговоры»?</div>
+        <div class="opts">
+          <label><input type="radio" name="q16" value="Сформированный договор"> Сформированный договор</label>
+          <label><input type="radio" name="q16" value="Поставленная задача"> Поставленная задача</label>
+          <label><input type="radio" name="q16" value="Установленный флаг «Счёт получен» и активная задача"> Установленный флаг «Счёт получен» и активная задача</label>
+          <label><input type="radio" name="q16" value="Заполненная форма оплаты"> Заполненная форма оплаты</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 17</div>
+        <div class="q-text">Почему на этапе «Жду решения / Переговоры» задача обязательна?</div>
+        <div class="opts">
+          <label><input type="radio" name="q17" value="Для статистики"> Для статистики</label>
+          <label><input type="radio" name="q17" value="Для контроля процесса согласования с клиентом"> Для контроля процесса согласования с клиентом</label>
+          <label><input type="radio" name="q17" value="Для автоматизации"> Для автоматизации</label>
+          <label><input type="radio" name="q17" value="Для удобства менеджера"> Для удобства менеджера</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 18</div>
+        <div class="q-text">Что происходит на этапе «Согласована оплата»?</div>
+        <div class="opts">
+          <label><input type="radio" name="q18" value="Проверка счёта"> Проверка счёта</label>
+          <label><input type="radio" name="q18" value="Отправка ТКП"> Отправка ТКП</label>
+          <label><input type="radio" name="q18" value="Формирование договора при наличии данных компании и банковских реквизитов"> Формирование договора при наличии данных компании и банковских реквизитов</label>
+          <label><input type="radio" name="q18" value="Подготовка к транспортировке"> Подготовка к транспортировке</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 19</div>
+        <div class="q-text">Сделка дошла до этапа «Согласована оплата», но договор не формируется. В чём самая вероятная причина?</div>
+        <div class="opts">
+          <label><input type="radio" name="q19" value="Не заполнена потребность"> Не заполнена потребность</label>
+          <label><input type="radio" name="q19" value="Не заполнены банковские реквизиты компании"> Не заполнены банковские реквизиты компании</label>
+          <label><input type="radio" name="q19" value="Нет задачи"> Нет задачи</label>
+          <label><input type="radio" name="q19" value="Не заполнен источник сделки"> Не заполнен источник сделки</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 20</div>
+        <div class="q-text">Сделка находится на этапе «Жду решения / Переговоры». Клиент согласен с ценой, но просит изменить условия оплаты. Какое действие корректно в системе?</div>
+        <div class="opts">
+          <label><input type="radio" name="q20" value="Перевести сделку в этап «Согласована оплата»"> Перевести сделку в этап «Согласована оплата»</label>
+          <label><input type="radio" name="q20" value="Изменить условия устно и ждать оплату"> Изменить условия устно и ждать оплату</label>
+          <label><input type="radio" name="q20" value="Изменить условия оплаты в карточке сделки после согласования с руководителем, сформировать спецификацию и продолжить переговоры"> Изменить условия оплаты в карточке сделки после согласования с руководителем, сформировать спецификацию и продолжить переговоры</label>
+          <label><input type="radio" name="q20" value="Вернуть сделку в этап «Счёт отправлен» без фиксации изменений"> Вернуть сделку в этап «Счёт отправлен» без фиксации изменений</label>
+        </div>
+      </div>
+      <div class="submit-wrap">
+        <button type="submit" class="submit-btn" id="submit-btn">Проверить результат</button>
+      </div>
+    </form>
+    <div id="result-box" style="display:none;"></div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script>
+    var PASSING_SCORE = 16;
+    var MAX_SCORE = 20;
+    var correct = {
+      q1: 'Провести сделку до этапа «Успешно реализовано»',
+      q2: 'Если выполнены все требования этапа: заполнены поля и сформированы документы',
+      q3: 'В этапах воронки и обязательных полях сделки',
+      q4: 'Попытка работать со сделкой, не понимая требований этапа',
+      q5: ['ФИО контакта', 'Телефон', 'Потребность', 'Приоритет', 'Источник сделки'],
+      q6: 'Телефон',
+      q7: 'В карточке сделки',
+      q8: 'Отсутствие источника сделки',
+      q9: 'Заполнить обязательные поля + добавить товар + сформировать ТКП',
+      q10: 'Во вкладке «Документы»',
+      q11: 'Нет',
+      q12: 'Отсутствие сформированного ТКП',
+      q13: 'Привязанная карточка компании с реквизитами',
+      q14: 'Нет, задачи формируются триггерами системы',
+      q15: 'Отсутствие задачи',
+      q16: 'Установленный флаг «Счёт получен» и активная задача',
+      q17: 'Для контроля процесса согласования с клиентом',
+      q18: 'Формирование договора при наличии данных компании и банковских реквизитов',
+      q19: 'Не заполнены банковские реквизиты компании',
+      q20: 'Изменить условия оплаты в карточке сделки после согласования с руководителем, сформировать спецификацию и продолжить переговоры'
+    };
+    function getSelected(name) {
+      var els = document.querySelectorAll('input[name="' + name + '"]:checked');
+      if (els.length === 0) return null;
+      if (els[0].type === 'radio') return els[0].value;
+      return [].map.call(els, function(e) { return e.value; });
+    }
+    function checkQ5(selected) {
+      if (!selected || selected.length !== 5) return false;
+      var want = correct.q5.slice().sort();
+      var got = selected.slice().sort();
+      return want.length === got.length && want.every(function(v, i) { return v === got[i]; });
+    }
+    document.getElementById('test-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var score = 0;
+      for (var i = 1; i <= 20; i++) {
+        var key = 'q' + i;
+        if (i === 5) { if (checkQ5(getSelected(key))) score += 1; }
+        else { if (getSelected(key) === correct[key]) score += 1; }
+      }
+      var box = document.getElementById('result-box');
+      box.style.display = 'block';
+      box.className = 'result ' + (score >= PASSING_SCORE ? 'pass' : 'fail');
+      var msg = score >= PASSING_SCORE ? 'Аттестация пройдена' : 'Аттестация не пройдена';
+      var detail = 'Набрано баллов: ' + score + ' из ' + MAX_SCORE + '. Проходной балл: ' + PASSING_SCORE + '.';
+      if (score >= 13 && score < 16) detail += ' (Gold с замечаниями)';
+      if (score < 13) detail += ' (результат: Silver)';
+      box.innerHTML = msg + '<div class="result-detail">' + detail + '</div>'
+        + '<p style="margin-top:0.75rem"><button type="button" class="submit-btn" id="screenshot-btn" style="padding:0.5rem 1rem;font-size:0.9rem">Скачать скриншот</button></p>';
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (typeof html2canvas === 'function') {
+        var doScreenshot = function() {
+          html2canvas(document.body, { useCORS: true, logging: false }).then(function(canvas) {
+            var d = new Date();
+            var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+            var suffix = score >= PASSING_SCORE ? 'prohod' : 'neprohod';
+            var name = 'attestation-gold-' + suffix + '-' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + '-' + pad(d.getHours()) + '-' + pad(d.getMinutes()) + '.png';
+            var a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = name;
+            a.click();
+          }).catch(function() {});
+        };
+        setTimeout(doScreenshot, 500);
+        setTimeout(function() {
+          var btn = document.getElementById('screenshot-btn');
+          if (btn) btn.addEventListener('click', doScreenshot);
+        }, 100);
+      }
+    });
+  </script>
+</body>
+</html>

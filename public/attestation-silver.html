@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Аттестация Silver — Знание системы | SpaceMETALL</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #f5f6f8;
+      --bg-card: #ffffff;
+      --border: #e2e4e8;
+      --text: #1A2F50;
+      --text-muted: rgba(26, 47, 80, 0.7);
+      --accent: #1A2F50;
+      --accent-silver: #6B7280;
+      --success: #22c55e;
+      --error: #E6004B;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Manrope', sans-serif;
+      background: var(--bg-page);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .top-header {
+      background: var(--accent);
+      padding: 1rem 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .top-header img { height: 40px; width: auto; display: block; }
+    .container { max-width: 640px; margin: 0 auto; padding: 2rem 1.5rem; flex: 1; width: 100%; }
+    .back { margin-bottom: 1.5rem; }
+    .back a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+    .back a:hover { color: var(--accent); }
+    header { text-align: center; margin-bottom: 2rem; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--accent-silver); }
+    .meta { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+    .score-info { font-size: 0.85rem; color: var(--text-muted); }
+    .block-title {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);
+      margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+    }
+    .q-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 0 6px rgba(26, 47, 80, 0.08);
+    }
+    .q-num { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .q-text { font-weight: 600; margin-bottom: 1rem; line-height: 1.4; color: var(--text); }
+    .opts { display: flex; flex-direction: column; gap: 0.6rem; }
+    label {
+      display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;
+      padding: 0.5rem 0.5rem 0.5rem 0; border-radius: 8px;
+    }
+    label:hover { background: rgba(26, 47, 80, 0.05); }
+    input[type="radio"], input[type="checkbox"] { margin-top: 0.2rem; accent-color: var(--accent); }
+    .submit-wrap { text-align: center; margin: 2.5rem 0 1.5rem; }
+    .submit-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.9rem 2.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      box-shadow: 0 0 6px rgba(26, 47, 80, 0.2);
+    }
+    .submit-btn:hover { opacity: 0.92; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .result {
+      text-align: center;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+    }
+    .result.pass { background: rgba(34, 197, 94, 0.12); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.4); }
+    .result.fail { background: rgba(230, 0, 75, 0.1); color: var(--error); border: 1px solid rgba(230, 0, 75, 0.3); }
+    .result-detail { font-size: 0.95rem; color: var(--text-muted); font-weight: 400; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <header class="top-header">
+    <a href="/"><img src="/sm-logo.png" alt="Space METALL"></a>
+  </header>
+  <div class="container">
+    <div class="back"><a href="/">← Вернуться к выбору лиги</a></div>
+    <header>
+      <h1>Аттестация — переход в Silver лигу</h1>
+      <p class="score-info">Проходной балл: 16 из 20</p>
+    </header>
+
+    <div class="block-title">Вопросы</div>
+    <form id="test-form">
+      <div class="q-block">
+        <div class="q-num">Вопрос 1</div>
+        <div class="q-text">Где корректно хранится ИНН клиента?</div>
+        <div class="opts">
+          <label><input type="radio" name="q1" value="В карточке контакта"> В карточке контакта</label>
+          <label><input type="radio" name="q1" value="В карточке компании"> В карточке компании</label>
+          <label><input type="radio" name="q1" value="В карточке сделки"> В карточке сделки</label>
+          <label><input type="radio" name="q1" value="В комментарии"> В комментарии</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 2</div>
+        <div class="q-text">Где должны храниться телефон и email сотрудника клиента?</div>
+        <div class="opts">
+          <label><input type="radio" name="q2" value="В карточке контакта"> В карточке контакта</label>
+          <label><input type="radio" name="q2" value="В карточке компании"> В карточке компании</label>
+          <label><input type="radio" name="q2" value="В карточке сделки"> В карточке сделки</label>
+          <label><input type="radio" name="q2" value="В задаче"> В задаче</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 3</div>
+        <div class="q-text">Что является обязательным для корректной работы сделки в B2B-логике SpaceMetall?</div>
+        <div class="opts">
+          <label><input type="radio" name="q3" value="Сделка + контакт"> Сделка + контакт</label>
+          <label><input type="radio" name="q3" value="Только сделка"> Только сделка</label>
+          <label><input type="radio" name="q3" value="Сделка + компания"> Сделка + компания</label>
+          <label><input type="radio" name="q3" value="Сделка + контакт + компания"> Сделка + контакт + компания</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 4</div>
+        <div class="q-text">Где фиксируется информация о том, как часто клиент покупает металл?</div>
+        <div class="opts">
+          <label><input type="radio" name="q4" value="В карточке компании"> В карточке компании</label>
+          <label><input type="radio" name="q4" value="В комментарии"> В комментарии</label>
+          <label><input type="radio" name="q4" value="В карточке сделки"> В карточке сделки</label>
+          <label><input type="radio" name="q4" value="В карточке контакта"> В карточке контакта</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 5</div>
+        <div class="q-text">Где должна фиксироваться информация о сортаменте и типе металла?</div>
+        <div class="opts">
+          <label><input type="radio" name="q5" value="В карточке компании"> В карточке компании</label>
+          <label><input type="radio" name="q5" value="В карточке сделки"> В карточке сделки</label>
+          <label><input type="radio" name="q5" value="В карточке контакта"> В карточке контакта</label>
+          <label><input type="radio" name="q5" value="В задаче"> В задаче</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 6</div>
+        <div class="q-text">Можно ли фиксировать ключевые данные клиента только в комментариях?</div>
+        <div class="opts">
+          <label><input type="radio" name="q6" value="Да, если подробно"> Да, если подробно</label>
+          <label><input type="radio" name="q6" value="Только временно"> Только временно</label>
+          <label><input type="radio" name="q6" value="Да"> Да</label>
+          <label><input type="radio" name="q6" value="Нет"> Нет</label>
+        </div>
+      </div>
+      <div class="block-title">Квалификация</div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 7 (несколько вариантов)</div>
+        <div class="q-text">Какие поля относятся к квалификации?</div>
+        <div class="opts">
+          <label><input type="checkbox" name="q7" value="Как работают"> Как работают</label>
+          <label><input type="checkbox" name="q7" value="Какой металл"> Какой металл</label>
+          <label><input type="checkbox" name="q7" value="Что используют"> Что используют</label>
+          <label><input type="checkbox" name="q7" value="Покупают заготовки"> Покупают заготовки</label>
+          <label><input type="checkbox" name="q7" value="Как часто"> Как часто</label>
+          <label><input type="checkbox" name="q7" value="Как транспортируют"> Как транспортируют</label>
+          <label><input type="checkbox" name="q7" value="Потребность"> Потребность</label>
+          <label><input type="checkbox" name="q7" value="Чертёж"> Чертёж</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 8</div>
+        <div class="q-text">Если все поля квалификации заполнены, но «Потребность» пустая — можно ли закрыть сделку как квалифицированную?</div>
+        <div class="opts">
+          <label><input type="radio" name="q8" value="Только с разрешения руководителя"> Только с разрешения руководителя</label>
+          <label><input type="radio" name="q8" value="Нет"> Нет</label>
+          <label><input type="radio" name="q8" value="Да"> Да</label>
+          <label><input type="radio" name="q8" value="Только если клиент перспективный"> Только если клиент перспективный</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 9</div>
+        <div class="q-text">Где считается корректно зафиксированной квалификация?</div>
+        <div class="opts">
+          <label><input type="radio" name="q9" value="В полях карточки сделки"> В полях карточки сделки</label>
+          <label><input type="radio" name="q9" value="В комментарии"> В комментарии</label>
+          <label><input type="radio" name="q9" value="В переписке"> В переписке</label>
+          <label><input type="radio" name="q9" value="В задаче"> В задаче</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 10</div>
+        <div class="q-text">Поле «Чертёж» в воронке [PreSale]:</div>
+        <div class="opts">
+          <label><input type="radio" name="q10" value="Обязательно для продажи"> Обязательно для продажи</label>
+          <label><input type="radio" name="q10" value="Не относится к квалификации"> Не относится к квалификации</label>
+          <label><input type="radio" name="q10" value="Заменяет поле «Потребность»"> Заменяет поле «Потребность»</label>
+          <label><input type="radio" name="q10" value="Обязательно всегда"> Обязательно всегда</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 11</div>
+        <div class="q-text">Что однозначно говорит о том, что квалификация НЕ пройдена?</div>
+        <div class="opts">
+          <label><input type="radio" name="q11" value="Нет счёта"> Нет счёта</label>
+          <label><input type="radio" name="q11" value="Клиент не купил"> Клиент не купил</label>
+          <label><input type="radio" name="q11" value="Нет заявки"> Нет заявки</label>
+          <label><input type="radio" name="q11" value="Не заполнено хотя бы одно поле квалификации"> Не заполнено хотя бы одно поле квалификации</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 12</div>
+        <div class="q-text">Можно ли заполнять поля квалификации «примерно»?</div>
+        <div class="opts">
+          <label><input type="radio" name="q12" value="Да, если клиент сложный"> Да, если клиент сложный</label>
+          <label><input type="radio" name="q12" value="Только для входящих"> Только для входящих</label>
+          <label><input type="radio" name="q12" value="Нет"> Нет</label>
+          <label><input type="radio" name="q12" value="Да"> Да</label>
+        </div>
+      </div>
+      <div class="block-title">Сценарии</div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 13</div>
+        <div class="q-text">Клиент не готов разговаривать, но оставил контакты и потребность. Что правильно?</div>
+        <div class="opts">
+          <label><input type="radio" name="q13" value="Удалить карточку"> Удалить карточку</label>
+          <label><input type="radio" name="q13" value="Закрыть сделку"> Закрыть сделку</label>
+          <label><input type="radio" name="q13" value="Перевести в «Квалификация пройдена»"> Перевести в «Квалификация пройдена»</label>
+          <label><input type="radio" name="q13" value="Заполнить контакт и потребность, перевести сделку в «Квалификация не пройдена» с причиной «Вышел на ЛПР»"> Заполнить контакт и потребность, перевести сделку в «Квалификация не пройдена» с причиной «Вышел на ЛПР»</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 14</div>
+        <div class="q-text">Клиент оставил контакты, но отказался проходить квалификацию. Что делаем?</div>
+        <div class="opts">
+          <label><input type="radio" name="q14" value="Ничего"> Ничего</label>
+          <label><input type="radio" name="q14" value="Закрываем сделку с корректной причиной отказа"> Закрываем сделку с корректной причиной отказа</label>
+          <label><input type="radio" name="q14" value="Продолжаем квалификацию"> Продолжаем квалификацию</label>
+          <label><input type="radio" name="q14" value="Переводим дальше по воронке"> Переводим дальше по воронке</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 15</div>
+        <div class="q-text">Контакт сообщил ИНН, но не готов общаться. Что правильно?</div>
+        <div class="opts">
+          <label><input type="radio" name="q15" value="Считать квалификацией"> Считать квалификацией</label>
+          <label><input type="radio" name="q15" value="Ждать"> Ждать</label>
+          <label><input type="radio" name="q15" value="Заполнить карточку компании и закрыть сделку с причиной отказа"> Заполнить карточку компании и закрыть сделку с причиной отказа</label>
+          <label><input type="radio" name="q15" value="Перевести в продажи"> Перевести в продажи</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 16</div>
+        <div class="q-text">Можно ли перевести сделку в «Квалификация пройдена» только на основании ИНН?</div>
+        <div class="opts">
+          <label><input type="radio" name="q16" value="Иногда"> Иногда</label>
+          <label><input type="radio" name="q16" value="Да"> Да</label>
+          <label><input type="radio" name="q16" value="Только для крупных"> Только для крупных</label>
+          <label><input type="radio" name="q16" value="Нет"> Нет</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 17</div>
+        <div class="q-text">В каком случае допустимо закрыть сделку без прохождения квалификации?</div>
+        <div class="opts">
+          <label><input type="radio" name="q17" value="Только если клиент отказался"> Только если клиент отказался</label>
+          <label><input type="radio" name="q17" value="Если квалификация не состоялась и корректно указана причина отказа"> Если квалификация не состоялась и корректно указана причина отказа</label>
+          <label><input type="radio" name="q17" value="Никогда"> Никогда</label>
+          <label><input type="radio" name="q17" value="Если нет времени"> Если нет времени</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 18</div>
+        <div class="q-text">Что считается логической ошибкой работы в системе?</div>
+        <div class="opts">
+          <label><input type="radio" name="q18" value="Получить ИНН"> Получить ИНН</label>
+          <label><input type="radio" name="q18" value="Закрыть сделку без продажи"> Закрыть сделку без продажи</label>
+          <label><input type="radio" name="q18" value="Зафиксировать отказ"> Зафиксировать отказ</label>
+          <label><input type="radio" name="q18" value="Пытаться перевести сделку в «Квалификация пройдена» без заполненных полей"> Пытаться перевести сделку в «Квалификация пройдена» без заполненных полей</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 19</div>
+        <div class="q-text">Где должны храниться контакты клиента?</div>
+        <div class="opts">
+          <label><input type="radio" name="q19" value="Везде"> Везде</label>
+          <label><input type="radio" name="q19" value="В карточке сделки"> В карточке сделки</label>
+          <label><input type="radio" name="q19" value="В карточке контакта"> В карточке контакта</label>
+          <label><input type="radio" name="q19" value="В комментариях"> В комментариях</label>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Вопрос 20</div>
+        <div class="q-text">Главная цель этапа [PreSale] Корпоративная база:</div>
+        <div class="opts">
+          <label><input type="radio" name="q20" value="Выставление счёта"> Выставление счёта</label>
+          <label><input type="radio" name="q20" value="Сбор базы"> Сбор базы</label>
+          <label><input type="radio" name="q20" value="Продажа"> Продажа</label>
+          <label><input type="radio" name="q20" value="Качественные данные и корректная квалификация"> Качественные данные и корректная квалификация</label>
+        </div>
+      </div>
+      <div class="submit-wrap">
+        <button type="submit" class="submit-btn" id="submit-btn">Проверить результат</button>
+      </div>
+    </form>
+    <div id="result-box" style="display:none;"></div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script>
+    var PASSING_SCORE = 16;
+    var MAX_SCORE = 20;
+    var correct = {
+      q1: 'В карточке компании',
+      q2: 'В карточке контакта',
+      q3: 'Сделка + контакт + компания',
+      q4: 'В карточке сделки',
+      q5: 'В карточке сделки',
+      q6: 'Нет',
+      q7: ['Как работают', 'Какой металл', 'Что используют', 'Покупают заготовки', 'Как часто', 'Как транспортируют'],
+      q8: 'Да',
+      q9: 'В полях карточки сделки',
+      q10: 'Не относится к квалификации',
+      q11: 'Не заполнено хотя бы одно поле квалификации',
+      q12: 'Нет',
+      q13: 'Заполнить контакт и потребность, перевести сделку в «Квалификация не пройдена» с причиной «Вышел на ЛПР»',
+      q14: 'Закрываем сделку с корректной причиной отказа',
+      q15: 'Заполнить карточку компании и закрыть сделку с причиной отказа',
+      q16: 'Нет',
+      q17: 'Если квалификация не состоялась и корректно указана причина отказа',
+      q18: 'Пытаться перевести сделку в «Квалификация пройдена» без заполненных полей',
+      q19: 'В карточке контакта',
+      q20: 'Качественные данные и корректная квалификация'
+    };
+    function getSelected(name) {
+      var els = document.querySelectorAll('input[name="' + name + '"]:checked');
+      if (els.length === 0) return null;
+      if (els[0].type === 'radio') return els[0].value;
+      return [].map.call(els, function(e) { return e.value; });
+    }
+    function checkQ7(selected) {
+      if (!selected || selected.length !== 6) return false;
+      var want = correct.q7.slice().sort();
+      var got = selected.slice().sort();
+      return want.length === got.length && want.every(function(v, i) { return v === got[i]; });
+    }
+    document.getElementById('test-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var score = 0;
+      for (var i = 1; i <= 20; i++) {
+        var key = 'q' + i;
+        if (i === 7) { if (checkQ7(getSelected(key))) score += 1; }
+        else { if (getSelected(key) === correct[key]) score += 1; }
+      }
+      var box = document.getElementById('result-box');
+      box.style.display = 'block';
+      box.className = 'result ' + (score >= PASSING_SCORE ? 'pass' : 'fail');
+      box.innerHTML = (score >= PASSING_SCORE ? 'Аттестация пройдена' : 'Аттестация не пройдена')
+        + '<div class="result-detail">Набрано баллов: ' + score + ' из ' + MAX_SCORE + '. Проходной балл: ' + PASSING_SCORE + '.</div>'
+        + '<p style="margin-top:0.75rem"><button type="button" class="submit-btn" id="screenshot-btn" style="padding:0.5rem 1rem;font-size:0.9rem">Скачать скриншот</button></p>';
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (typeof html2canvas === 'function') {
+        var doScreenshot = function() {
+          html2canvas(document.body, { useCORS: true, logging: false }).then(function(canvas) {
+            var d = new Date();
+            var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+            var suffix = score >= PASSING_SCORE ? 'prohod' : 'neprohod';
+            var name = 'attestation-silver-' + suffix + '-' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + '-' + pad(d.getHours()) + '-' + pad(d.getMinutes()) + '.png';
+            var a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = name;
+            a.click();
+          }).catch(function() {});
+        };
+        setTimeout(doScreenshot, 500);
+        setTimeout(function() {
+          var btn = document.getElementById('screenshot-btn');
+          if (btn) btn.addEventListener('click', doScreenshot);
+        }, 100);
+      }
+    });
+  </script>
+</body>
+</html>

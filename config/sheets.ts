@@ -35,6 +35,9 @@ export const SALES_FUNNEL_COLUMNS = {
   status_name: ["имя статуса", "статус сделки", "status"],
   date: ["date", "invoice_date", "дата", "created_at"],
   paid_date: ["paid_date", "дата_оплаты", "дата завершения", "paid_date"],
+  /** Компания/клиент — для расчёта повторных продаж */
+  company_id: ["company_id", "companyid", "id компании", "компания", "контрагент", "company", "клиент"],
+  company_name: ["название компании", "company_name", "companyname", "организация"],
 } as const;
 
 /** Варианты названий колонок для связок */

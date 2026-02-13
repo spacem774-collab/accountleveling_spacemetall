@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { fetchCompanies, fetchInvoices } from "@/lib/sheets";
-import { getCompaniesCount, computeTotals, computeMaxMonthlyBudget, computeMonthlyStats } from "@/lib/metrics";
+import { getCompaniesCount, computeTotals, computeMaxMonthlyBudget, computeMonthlyStats, computeTotalCurrentMonthMargin, computeTotalCurrentMonthBudget, computeTotalPreviousMonthMargin, getBestEmployeeByPreviousMonthMargin, getBestEmployeeByCurrentYearMargin } from "@/lib/metrics";
 import { getLeague, LEAGUES } from "@/config/league";
+import { getDepartmentPlan } from "@/config/plans";
 import { getHardSkillsRank } from "@/config/hardSkills";
 import { countAchievements } from "@/lib/achievementsCatalog";
 
@@ -90,6 +91,13 @@ export async function GET() {
       };
     });
 
+    const total_current_month_margin = computeTotalCurrentMonthMargin(invoices, excluded);
+    const total_current_month_budget = computeTotalCurrentMonthBudget(invoices, excluded);
+    const total_previous_month_margin = computeTotalPreviousMonthMargin(invoices, excluded);
+    const department_plan = getDepartmentPlan(userIds);
+    const best_prev_month = getBestEmployeeByPreviousMonthMargin(invoices, userIds, excluded);
+    const best_year = getBestEmployeeByCurrentYearMargin(invoices, userIds, excluded);
+
     // Сортировка: приоритет 1 — лига, приоритет 2 — Hard Skills
     employees.sort((a, b) => {
       const leagueOrderA = LEAGUE_SORT_ORDER[a.league_name.toLowerCase()] ?? 0;
@@ -102,7 +110,15 @@ export async function GET() {
     });
 
     return NextResponse.json(
-      { employees },
+      {
+        employees,
+        total_current_month_margin,
+        total_current_month_budget,
+        total_previous_month_margin,
+        department_plan,
+        best_prev_month_employee: best_prev_month,
+        best_year_employee: best_year,
+      },
       { headers: { "Cache-Control": "no-store, max-age=0" } }
     );
   } catch (err) {
