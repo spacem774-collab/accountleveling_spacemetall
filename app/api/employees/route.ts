@@ -4,6 +4,7 @@ import { getCompaniesCount, computeTotals, computeMaxMonthlyBudget, computeMonth
 import { getLeague, LEAGUES } from "@/config/league";
 import { getDepartmentPlan } from "@/config/plans";
 import { getHardSkillsRank } from "@/config/hardSkills";
+import { getContacts } from "@/config/contacts";
 import { countAchievements } from "@/lib/achievementsCatalog";
 
 /** Порядок лиг для сортировки: индекс в LEAGUES (Legend=6, Bronze=0) — выше индекс = выше приоритет */
@@ -34,6 +35,8 @@ export interface EmployeeItem {
   };
   /** Общее количество полученных ачивок */
   total_achievements: number;
+  /** Контактные данные */
+  contacts?: { phone?: string; email?: string; telegram?: string; instagram?: string };
 }
 
 function getExcludedUserIds(): string[] {
@@ -88,6 +91,7 @@ export async function GET() {
           name: hardSkills.name,
         },
         total_achievements,
+        contacts: getContacts(userId) ?? undefined,
       };
     });
 
