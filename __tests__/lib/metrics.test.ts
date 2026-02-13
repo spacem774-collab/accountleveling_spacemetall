@@ -63,7 +63,7 @@ describe("computeTotals", () => {
   it("calculates conversion correctly", () => {
     const invoices: InvoiceRow[] = [
       { user_id: "u1", invoice_id: "i1", invoice_amount: 100, invoice_date: "2024-01-01", status: "В работе" },
-      { user_id: "u1", invoice_id: "i2", invoice_amount: 200, invoice_date: "2024-01-02", status: "PAID" },
+      { user_id: "u1", invoice_id: "i2", invoice_amount: 200, invoice_date: "2024-01-02", status: "Успешно реализовано" },
     ];
     const totals = computeTotals(invoices, "u1");
     expect(totals.issued_total).toBe(2);
@@ -185,11 +185,11 @@ describe("aggregateByBuckets", () => {
 
   it("correctly assigns invoices to buckets", () => {
     const invoices: InvoiceRow[] = [
-      { user_id: "u1", invoice_id: "i1", invoice_amount: 25000, invoice_date: "2024-01-01", status: "PAID" },
-      { user_id: "u1", invoice_id: "i2", invoice_amount: 100000, invoice_date: "2024-01-02", status: "PAID" },
-      { user_id: "u1", invoice_id: "i3", invoice_amount: 350000, invoice_date: "2024-01-03", status: "PAID" },
-      { user_id: "u1", invoice_id: "i4", invoice_amount: 750000, invoice_date: "2024-01-04", status: "PAID" },
-      { user_id: "u1", invoice_id: "i5", invoice_amount: 2000000, invoice_date: "2024-01-05", status: "PAID" },
+      { user_id: "u1", invoice_id: "i1", invoice_amount: 25000, invoice_date: "2024-01-01", status: "Успешно реализовано" },
+      { user_id: "u1", invoice_id: "i2", invoice_amount: 100000, invoice_date: "2024-01-02", status: "Успешно реализовано" },
+      { user_id: "u1", invoice_id: "i3", invoice_amount: 350000, invoice_date: "2024-01-03", status: "Успешно реализовано" },
+      { user_id: "u1", invoice_id: "i4", invoice_amount: 750000, invoice_date: "2024-01-04", status: "Успешно реализовано" },
+      { user_id: "u1", invoice_id: "i5", invoice_amount: 2000000, invoice_date: "2024-01-05", status: "Успешно реализовано" },
     ];
     const buckets = aggregateByBuckets(invoices, "u1");
 

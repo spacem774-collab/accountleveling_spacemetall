@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getNextLeague, getProgressToNextLeague } from "@/config/league";
+import { MARGIN_ACHIEVEMENTS_CATALOG, MAX_MONTHLY_BUDGET_CATALOG, MAX_MONTHLY_SALES_CATALOG } from "@/lib/achievementsCatalog";
 
 interface League {
   id: string;
@@ -17,6 +18,7 @@ interface Totals {
   conversion_total: number;
   paid_sum_total: number;
   budget_total?: number;
+  total_margin?: number;
 }
 
 interface BucketMetrics {
@@ -30,6 +32,15 @@ interface BucketMetrics {
   budget_sum_bucket?: number;
 }
 
+interface AchievementItem {
+  id: string;
+  title: string;
+  description: string;
+  threshold: number;
+  type: string;
+  achieved: boolean;
+}
+
 interface MetricsData {
   user_id: string;
   companies_count: number;
@@ -37,6 +48,9 @@ interface MetricsData {
   totals: Totals;
   buckets: BucketMetrics[];
   cancelled: { count: number };
+  max_monthly_budget?: number;
+  max_monthly_paid_count?: number;
+  current_month_budget?: number;
   updated_at: string;
   about_text?: string;
   about_updated_at?: string | null;
@@ -65,6 +79,17 @@ function getDefaultAvatar(userId: string): string | null {
   return DEFAULT_AVATARS[userId] ?? null;
 }
 
+/** План по продажам на текущий месяц (₽) */
+const MONTHLY_PLANS: Record<string, number> = {
+  "Ружников Дмитрий Константинович": 200_000,
+  "Кадыров Никита Дмитриевич": 150_000,
+  "Гнусарёв Евгений Андреевич": 0,
+};
+
+function getMonthlyPlan(userId: string): number {
+  return MONTHLY_PLANS[userId] ?? 0;
+}
+
 function LeagueProgressBar({
   companiesCount,
   currentLeague,
@@ -91,14 +116,10 @@ function LeagueProgressBar({
         <span>Опыт до {nextLeague.name}</span>
         <span className="font-medium">{percent}%</span>
       </div>
-      <div className="h-2.5 w-full rounded-full bg-[#1A2F50]/10 overflow-hidden shadow-inner">
+      <div className="h-5 w-full rounded-full bg-[#1A2F50]/10 overflow-hidden shadow-inner">
         <div
-          className="h-full rounded-full transition-all duration-700 ease-out"
-          style={{
-            width: `${percent}%`,
-            background: `linear-gradient(90deg, ${currentLeague.color_hex}, ${nextLeague.color_hex})`,
-            boxShadow: `0 0 8px ${nextLeague.color_hex}66`,
-          }}
+          className="h-full rounded-full bg-[#1A2F50] transition-all duration-700 ease-out shadow-[0_0_8px_rgba(26,47,80,0.4)]"
+          style={{ width: `${percent}%` }}
         />
       </div>
     </div>
@@ -113,7 +134,9 @@ function DashboardContent() {
   const [aboutText, setAboutText] = useState("");
   const [aboutSaving, setAboutSaving] = useState(false);
   const [aboutSaved, setAboutSaved] = useState(false);
+  const [aboutError, setAboutError] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [totalAchievements, setTotalAchievements] = useState<AchievementItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,6 +173,18 @@ function DashboardContent() {
     return () => clearInterval(interval);
   }, [userId]);
 
+  // Загрузка ачивок «Общее количество продаж»
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`/api/achievements?user_id=${encodeURIComponent(userId)}&month=all`)
+      .then((res) => (res.ok ? res.json() : { achievements: [] }))
+      .then((json: { achievements?: AchievementItem[] }) => {
+        const list = json.achievements ?? [];
+        setTotalAchievements(list.filter((a) => a.type === "total_sales"));
+      })
+      .catch(() => setTotalAchievements([]));
+  }, [userId]);
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!userId || !e.target.files?.[0]) return;
     const file = e.target.files[0];
@@ -177,13 +212,17 @@ function DashboardContent() {
     if (!userId) return;
     setAboutSaving(true);
     setAboutSaved(false);
+    setAboutError(null);
     try {
       const res = await fetch("/api/about", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, about_text: aboutText }),
       });
-      if (!res.ok) throw new Error("Failed to save");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.error ?? `Ошибка ${res.status}`);
+      }
       setAboutSaved(true);
       setData((prev) =>
         prev
@@ -194,8 +233,9 @@ function DashboardContent() {
             }
           : null
       );
-    } catch {
-      setError("Ошибка сохранения");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Ошибка сохранения";
+      setAboutError(msg);
     } finally {
       setAboutSaving(false);
     }
@@ -241,7 +281,7 @@ function DashboardContent() {
         {/* 1. Карточка профиля: фото + иконка ранга */}
         <section
           className="rounded-xl p-6 shadow-md border-2 flex items-center gap-5 bg-white"
-          style={{ borderColor: league.color_hex }}
+          style={{ borderColor: "#1A2F50" }}
         >
           {/* Фото сотрудника с загрузкой */}
           <label className="relative flex-shrink-0 cursor-pointer group block">
@@ -255,8 +295,8 @@ function DashboardContent() {
             <div
               className="relative w-24 h-24 rounded-full overflow-hidden bg-[#1A2F50]/10 flex items-center justify-center transition-all"
               style={{
-                border: `3px solid ${league.color_hex}`,
-                boxShadow: `0 0 12px ${league.color_hex}66`,
+                border: "3px solid #1A2F50",
+                boxShadow: "0 0 12px rgba(26,47,80,0.4)",
               }}
             >
               <div className="w-full h-full rounded-full overflow-hidden group-hover:opacity-90">
@@ -290,20 +330,222 @@ function DashboardContent() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold" style={{ color: league.color_hex }}>
+            <h1 className="text-2xl font-bold text-[#1A2F50]">
               {league.name}
             </h1>
             <p className="text-[#1A2F50]/70 mt-1">
               Компаний с контактом: <strong>{formatNumber(data.companies_count)}</strong>
             </p>
             <LeagueProgressBar companiesCount={data.companies_count} currentLeague={league} />
-            <p className="text-xs text-[#1A2F50]/50 mt-1">
-              Ранг определяется автоматически по количеству связок
-            </p>
+            {getMonthlyPlan(data.user_id) > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-xs text-[#1A2F50]/70 mb-1">
+                  <span>План на текущий месяц</span>
+                  <span className="font-medium">
+                    {formatNumber(data.current_month_budget ?? 0)} ₽ / {formatNumber(getMonthlyPlan(data.user_id))} ₽
+                  </span>
+                </div>
+                <div className="h-5 w-full rounded-full bg-[#1A2F50]/10 overflow-hidden shadow-inner">
+                  <div
+                    className="h-full rounded-full bg-[#E6004B] transition-all duration-500 ease-out"
+                    style={{
+                      width: `${Math.min(100, ((data.current_month_budget ?? 0) / getMonthlyPlan(data.user_id)) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
-        {/* 2. Общая статистика */}
+        {/* 2. Achievements — объединённый блок */}
+        <section className="bg-white rounded-xl p-6 shadow-md border border-[#e2e4e8]">
+          {(() => {
+            const paidTotal = totals.paid_total ?? 0;
+            const maxSales = data.max_monthly_paid_count ?? 0;
+            const budgetTotal = totals.budget_total ?? 0;
+            const maxBudget = data.max_monthly_budget ?? 0;
+            const achievedTotal =
+              totalAchievements.filter((a) => paidTotal >= a.threshold).length +
+              MAX_MONTHLY_SALES_CATALOG.filter((a) => maxSales >= a.threshold).length +
+              MARGIN_ACHIEVEMENTS_CATALOG.filter((a) => budgetTotal >= a.threshold).length +
+              MAX_MONTHLY_BUDGET_CATALOG.filter((a) => maxBudget >= a.threshold).length;
+            const totalCount =
+              totalAchievements.length +
+              MAX_MONTHLY_SALES_CATALOG.length +
+              MARGIN_ACHIEVEMENTS_CATALOG.length +
+              MAX_MONTHLY_BUDGET_CATALOG.length;
+            return (
+              <h2 className="text-xl font-semibold mb-6 text-[#1A2F50]">
+                Achievements{" "}
+                <span className="text-[#E6004B] font-medium">
+                  {achievedTotal} / {totalCount}
+                </span>
+              </h2>
+            );
+          })()}
+
+          {/* Подблок: Общее количество продаж */}
+          <div className="pb-6 mb-6 border-b border-[#e2e4e8]">
+            <h3 className="text-base font-medium mb-2 text-[#1A2F50]">Общее количество продаж</h3>
+            <p className="text-sm text-[#1A2F50]/60 mb-3">
+              Закрытых сделок всего: <strong>{formatNumber(totals.paid_total)}</strong>
+            </p>
+            {totalAchievements.length > 0 && (() => {
+              const paidTotal = totals.paid_total ?? 0;
+              const achievedCount = totalAchievements.filter((a) => paidTotal >= a.threshold).length;
+              const progressPercent = (achievedCount / totalAchievements.length) * 100;
+              return (
+                <>
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-sm text-[#1A2F50]/70 mb-1">
+                      <span>{achievedCount} из {totalAchievements.length}</span>
+                      <span className="font-medium text-[#E6004B]">{Math.round(progressPercent)}%</span>
+                    </div>
+                    <div className="h-4 w-full rounded-full bg-[#1A2F50]/10 overflow-hidden">
+                      <div className="h-full rounded-full bg-[#E6004B] transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {totalAchievements.map((a) => {
+                      const achieved = paidTotal >= a.threshold;
+                      return (
+                        <span key={a.id} title={a.description}
+                          className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            achieved ? "bg-[#E6004B] text-white border-2 border-[#E6004B] shadow-sm" : "bg-[#1A2F50]/5 text-[#1A2F50]/50 border border-[#1A2F50]/10"
+                          }`}>
+                          {achieved ? "✓ " : ""}{a.title}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Подблок: Продажи в месяц */}
+          <div className="pb-6 mb-6 border-b border-[#e2e4e8]">
+            <h3 className="text-base font-medium mb-2 text-[#1A2F50]">Продажи в месяц</h3>
+            <p className="text-sm text-[#1A2F50]/60 mb-3">
+              Рекорд продаж в одном месяце: <strong>{formatNumber(data.max_monthly_paid_count ?? 0)}</strong>
+            </p>
+            {(() => {
+              const maxSales = data.max_monthly_paid_count ?? 0;
+              const salesCatalog = MAX_MONTHLY_SALES_CATALOG;
+              const achievedCount = salesCatalog.filter((a) => maxSales >= a.threshold).length;
+              const progressPercent = salesCatalog.length > 0 ? (achievedCount / salesCatalog.length) * 100 : 0;
+              return (
+                <>
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-sm text-[#1A2F50]/70 mb-1">
+                      <span>{achievedCount} из {salesCatalog.length}</span>
+                      <span className="font-medium text-[#E6004B]">{Math.round(progressPercent)}%</span>
+                    </div>
+                    <div className="h-4 w-full rounded-full bg-[#1A2F50]/10 overflow-hidden">
+                      <div className="h-full rounded-full bg-[#E6004B] transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {salesCatalog.map((a) => {
+                      const achieved = maxSales >= a.threshold;
+                      return (
+                        <span key={a.id} title={a.description}
+                          className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            achieved ? "bg-[#E6004B] text-white border-2 border-[#E6004B] shadow-sm" : "bg-[#1A2F50]/5 text-[#1A2F50]/50 border border-[#1A2F50]/10"
+                          }`}>
+                          {achieved ? "✓ " : ""}{a.title}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Подблок: Итого по бюджету */}
+          <div className="pb-6 mb-6 border-b border-[#e2e4e8]">
+            <h3 className="text-base font-medium mb-2 text-[#1A2F50]">Итого по бюджету</h3>
+            <p className="text-sm text-[#1A2F50]/60 mb-3">
+              Сумма продаж всего: <strong>{formatNumber(totals.budget_total ?? 0)} ₽</strong>
+            </p>
+            {(() => {
+              const budgetTotal = totals.budget_total ?? 0;
+              const marginCatalog = MARGIN_ACHIEVEMENTS_CATALOG;
+              const achievedCount = marginCatalog.filter((a) => budgetTotal >= a.threshold).length;
+              const progressPercent = marginCatalog.length > 0 ? (achievedCount / marginCatalog.length) * 100 : 0;
+              return (
+                <>
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-sm text-[#1A2F50]/70 mb-1">
+                      <span>{achievedCount} из {marginCatalog.length}</span>
+                      <span className="font-medium text-[#E6004B]">{Math.round(progressPercent)}%</span>
+                    </div>
+                    <div className="h-4 w-full rounded-full bg-[#1A2F50]/10 overflow-hidden">
+                      <div className="h-full rounded-full bg-[#E6004B] transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {marginCatalog.map((a) => {
+                      const achieved = budgetTotal >= a.threshold;
+                      return (
+                        <span key={a.id} title={a.description}
+                          className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            achieved ? "bg-[#E6004B] text-white border-2 border-[#E6004B] shadow-sm" : "bg-[#1A2F50]/5 text-[#1A2F50]/50 border border-[#1A2F50]/10"
+                          }`}>
+                          {achieved ? "✓ " : ""}{a.title}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Подблок: Максимальная маржа в месяц */}
+          <div>
+            <h3 className="text-base font-medium mb-2 text-[#1A2F50]">Максимальная маржа в месяц</h3>
+            <p className="text-sm text-[#1A2F50]/60 mb-3">
+              Рекордная сумма по бюджету в одном месяце: <strong>{formatNumber(data.max_monthly_budget ?? 0)} ₽</strong>
+            </p>
+            {(() => {
+              const maxBudget = data.max_monthly_budget ?? 0;
+              const maxCatalog = MAX_MONTHLY_BUDGET_CATALOG;
+              const achievedCount = maxCatalog.filter((a) => maxBudget >= a.threshold).length;
+              const progressPercent = maxCatalog.length > 0 ? (achievedCount / maxCatalog.length) * 100 : 0;
+              return (
+                <>
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-sm text-[#1A2F50]/70 mb-1">
+                      <span>{achievedCount} из {maxCatalog.length}</span>
+                      <span className="font-medium text-[#E6004B]">{Math.round(progressPercent)}%</span>
+                    </div>
+                    <div className="h-4 w-full rounded-full bg-[#1A2F50]/10 overflow-hidden">
+                      <div className="h-full rounded-full bg-[#E6004B] transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {maxCatalog.map((a) => {
+                      const achieved = maxBudget >= a.threshold;
+                      return (
+                        <span key={a.id} title={a.description}
+                          className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            achieved ? "bg-[#E6004B] text-white border-2 border-[#E6004B] shadow-sm" : "bg-[#1A2F50]/5 text-[#1A2F50]/50 border border-[#1A2F50]/10"
+                          }`}>
+                          {achieved ? "✓ " : ""}{a.title}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </section>
+
+        {/* 3. Общая статистика */}
         <section className="bg-white rounded-xl p-6 shadow-md border border-[#e2e4e8]">
           <h2 className="text-lg font-semibold mb-4 text-[#1A2F50]">Общая статистика</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -332,7 +574,7 @@ function DashboardContent() {
           </div>
         </section>
 
-        {/* 3. Таблица по бакетам */}
+        {/* 4. Таблица по бакетам */}
         <section className="bg-white rounded-xl p-6 shadow-md overflow-x-auto border border-[#e2e4e8]">
           <h2 className="text-lg font-semibold mb-4 text-[#1A2F50]">Продажи по диапазонам</h2>
           <table className="w-full text-left">
@@ -370,7 +612,7 @@ function DashboardContent() {
           </table>
         </section>
 
-        {/* 4. Отменённые счета */}
+        {/* 5. Отменённые счета */}
         <section className="bg-white rounded-xl p-6 shadow-md border border-[#e2e4e8]">
           <h2 className="text-lg font-semibold mb-2 text-[#1A2F50]">Отменённые счета</h2>
           <p className="text-[#1A2F50]/70">
@@ -378,17 +620,23 @@ function DashboardContent() {
           </p>
         </section>
 
-        {/* 5. О себе */}
+        {/* 6. О себе */}
         <section className="bg-white rounded-xl p-6 shadow-md border border-[#e2e4e8]">
-          <h2 className="text-lg font-semibold mb-4 text-[#1A2F50]">О себе</h2>
+          <h2 className="text-lg font-semibold mb-1 text-[#1A2F50]">О себе</h2>
+          <p className="text-sm text-[#1A2F50]/60 mb-4">
+            Напишите о сильных сторонах в работе, номенклатуре которую знаете, хобби, спорте и т.п.
+          </p>
           <textarea
             value={aboutText}
-            onChange={(e) => setAboutText(e.target.value)}
+            onChange={(e) => {
+              setAboutText(e.target.value);
+              setAboutError(null);
+            }}
             rows={4}
             className="w-full px-4 py-3 border border-[#1A2F50]/20 rounded-lg bg-white text-[#1A2F50] placeholder:text-[#1A2F50]/50 focus:ring-2 focus:ring-[#E6004B]/40 focus:border-[#E6004B]"
-            placeholder="Расскажите о себе..."
+            placeholder="Сильные стороны, номенклатура, хобби, спорт..."
           />
-          <div className="mt-4 flex items-center gap-3">
+          <div className="mt-4 flex items-center gap-3 flex-wrap">
             <button
               onClick={handleSaveAbout}
               disabled={aboutSaving}
@@ -401,10 +649,15 @@ function DashboardContent() {
                 Сохранено
               </span>
             )}
+            {aboutError && (
+              <span className="text-[#E6004B] text-sm">
+                {aboutError}
+              </span>
+            )}
           </div>
         </section>
 
-        {/* 6. Время обновления */}
+        {/* 7. Время обновления */}
         <section className="text-sm text-[#1A2F50]/60">
           Данные обновлены:{" "}
           {new Date(data.updated_at).toLocaleString("ru-RU", {

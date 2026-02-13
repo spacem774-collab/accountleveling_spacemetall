@@ -9,6 +9,8 @@ import {
   SALES_FUNNEL_SPREADSHEET_ID,
   CONNECTIONS_SPREADSHEET_ID,
   SALES_FUNNEL_COLUMNS,
+  SALES_FUNNEL_DEFAULT_SHEET,
+  SALES_FUNNEL_SHEET_ALIASES,
   CONNECTIONS_COLUMNS,
   findColumnIndex,
 } from "@/config/sheets";
@@ -100,9 +102,9 @@ function parseInvoiceRow(
     user_id: String(row[userIdx] ?? "").trim(),
     invoice_id: String(row[invIdx] ?? "").trim(),
     invoice_amount: amount,
-    invoice_date: row[dateIdx] ?? "",
+    invoice_date: String(row[dateIdx] ?? "").trim(),
     status: String(row[statusIdx] ?? "").trim(),
-    paid_date: row[paidIdx]?.trim() || undefined,
+    paid_date: String(row[paidIdx] ?? "").trim() || undefined,
     budget: budgetVal != null && !Number.isNaN(budgetVal) ? budgetVal : undefined,
     purchase_amount:
       purchaseVal != null && !Number.isNaN(purchaseVal) ? purchaseVal : undefined,
@@ -163,7 +165,8 @@ function getFirstSheetName(sheetNames: string[]): string {
 
 async function fetchFromGoogleSheets(
   sheetName: string,
-  spreadsheetIdOverride?: string
+  spreadsheetIdOverride?: string,
+  options?: { skipFallback?: boolean }
 ): Promise<string[][]> {
   const spreadsheetId =
     spreadsheetIdOverride ??
@@ -198,16 +201,18 @@ async function fetchFromGoogleSheets(
     rows = await tryFetch(sheetName);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("Unable to parse range") || msg.includes("could not find a range")) {
-      const allSheets = await getSheetNames(spreadsheetId, serviceAccountJson);
-      const fallback = getFirstSheetName(allSheets);
-      rows = await tryFetch(fallback);
-    } else {
+    if (options?.skipFallback || !(msg.includes("Unable to parse range") || msg.includes("could not find a range"))) {
+      if (options?.skipFallback && (msg.includes("Unable to parse range") || msg.includes("could not find a range"))) {
+        throw new Error(`Лист «${sheetName}» не найден. Создайте лист с именем «${sheetName}» в таблице (колонки: user_id, about_text, updated_at, avatar_url).`);
+      }
       throw err;
     }
+    const allSheets = await getSheetNames(spreadsheetId, serviceAccountJson);
+    const fallback = getFirstSheetName(allSheets);
+    rows = await tryFetch(fallback);
   }
 
-  if (rows.length === 0 || (rows.length === 1 && (rows[0] ?? []).every((c) => !String(c).trim()))) {
+  if (!options?.skipFallback && (rows.length === 0 || (rows.length === 1 && (rows[0] ?? []).every((c) => !String(c).trim())))) {
     const allSheets = await getSheetNames(spreadsheetId, serviceAccountJson);
     for (const alt of allSheets) {
       if (alt === sheetName) continue;
@@ -226,13 +231,19 @@ async function fetchFromGoogleSheets(
 
 async function writeToGoogleSheets(
   sheetName: string,
-  values: string[][]
+  values: string[][],
+  spreadsheetIdOverride?: string
 ): Promise<void> {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  const spreadsheetId =
+    spreadsheetIdOverride ??
+    process.env.GOOGLE_SHEETS_SPREADSHEET_ID ??
+    process.env.GOOGLE_SHEETS_CONNECTIONS_ID ??
+    process.env.GOOGLE_SHEETS_SALES_FUNNEL_ID ??
+    CONNECTIONS_SPREADSHEET_ID;
   const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 
-  if (!spreadsheetId || !serviceAccountJson) {
-    throw new Error("GOOGLE_SHEETS_SPREADSHEET_ID and GOOGLE_SERVICE_ACCOUNT_JSON are required");
+  if (!serviceAccountJson) {
+    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is required");
   }
 
   const credentials = JSON.parse(serviceAccountJson);
@@ -254,6 +265,11 @@ async function writeToGoogleSheets(
 
 let companiesCacheStore: { data: CompanyRow[]; expiresAt: number } | null = null;
 let invoicesCacheStore: { data: InvoiceRow[]; expiresAt: number } | null = null;
+
+/** Сбросить кэш воронки — для отладки (свежие данные из таблицы) */
+export function clearInvoicesCache(): void {
+  invoicesCacheStore = null;
+}
 
 export async function fetchCompanies(): Promise<CompanyRow[]> {
   const mode = process.env.MODE ?? "mock";
@@ -368,11 +384,23 @@ export async function fetchInvoices(): Promise<InvoiceRow[]> {
       process.env.GOOGLE_SHEETS_SALES_FUNNEL_ID ??
       process.env.GOOGLE_SHEETS_SPREADSHEET_ID ??
       SALES_FUNNEL_SPREADSHEET_ID;
-    const sheetName =
-      process.env.SALES_FUNNEL_SHEET_NAME ??
-      process.env.INVOICES_SHEET_NAME ??
-      (process.env.GOOGLE_SHEETS_SALES_FUNNEL_ID ? "Сделки" : "Invoices");
-    const rows = await fetchFromGoogleSheets(sheetName, spreadsheetId);
+    const envSheet =
+      process.env.SALES_FUNNEL_SHEET_NAME ?? process.env.INVOICES_SHEET_NAME;
+    const sheetNamesToTry = envSheet
+      ? [envSheet]
+      : [...SALES_FUNNEL_SHEET_ALIASES];
+    let rows: string[][] = [];
+    for (const name of sheetNamesToTry) {
+      try {
+        rows = await fetchFromGoogleSheets(name, spreadsheetId);
+        if (rows.length > 0 && (rows[0] ?? []).some((c) => String(c).trim())) break;
+      } catch {
+        continue;
+      }
+    }
+    if (rows.length === 0) {
+      rows = await fetchFromGoogleSheets(sheetNamesToTry[0], spreadsheetId);
+    }
     const headers = (rows[0] ?? []).map((h) => String(h ?? ""));
 
     const headerIndices = {
@@ -431,7 +459,7 @@ export async function fetchAbout(userId: string): Promise<AboutRow | null> {
         process.env.GOOGLE_SHEETS_SPREADSHEET_ID ??
         process.env.GOOGLE_SHEETS_CONNECTIONS_ID ??
         CONNECTIONS_SPREADSHEET_ID;
-      const rows = await fetchFromGoogleSheets("About", spreadsheetId);
+      const rows = await fetchFromGoogleSheets("About", spreadsheetId, { skipFallback: true });
       const aboutRow = rows.slice(1).find((row) => (row[0] ?? "") === userId);
       const result: AboutRow | null = aboutRow
         ? parseAboutRow(aboutRow)
@@ -464,7 +492,11 @@ export async function writeAbout(
   }
 
   if (mode === "service_account") {
-    const rows = await fetchFromGoogleSheets("About");
+    const spreadsheetId =
+      process.env.GOOGLE_SHEETS_SPREADSHEET_ID ??
+      process.env.GOOGLE_SHEETS_CONNECTIONS_ID ??
+      CONNECTIONS_SPREADSHEET_ID;
+    const rows = await fetchFromGoogleSheets("About", spreadsheetId, { skipFallback: true });
     const data = rows.slice(1);
     const existing = data.find((row) => (row[0] ?? "") === userId);
     const aboutTextToWrite = avatarUrl !== undefined ? (existing?.[1] ?? aboutText) : aboutText;
@@ -484,7 +516,7 @@ export async function writeAbout(
     }
 
     const allRows = [rows[0] ?? ["user_id", "about_text", "updated_at", "avatar_url"], ...data];
-    await writeToGoogleSheets("About", allRows);
+    await writeToGoogleSheets("About", allRows, spreadsheetId);
     return;
   }
 
@@ -587,7 +619,7 @@ export async function fetchDebugSalesFunnelRaw(): Promise<{
     const sheetName =
       process.env.SALES_FUNNEL_SHEET_NAME ??
       process.env.INVOICES_SHEET_NAME ??
-      getFirstSheetName(sheetNames);
+      SALES_FUNNEL_DEFAULT_SHEET;
     const rows = await fetchFromGoogleSheets(sheetName, spreadsheetId);
     const headers = (rows[0] ?? []).map((h) => String(h ?? "").trim());
     const dataRows = rows.slice(1);

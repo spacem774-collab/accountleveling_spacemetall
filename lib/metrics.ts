@@ -6,10 +6,15 @@ export function hasInvoiceIssued(row: InvoiceRow): boolean {
   return String(row.invoice_id ?? "").trim() !== "";
 }
 
-/** Сделка оплачена = статус "Успешно реализовано" или "PAID" */
+/** Нормализация строки статуса (убирает лишние пробелы) */
+function normalizeStatus(s: string): string {
+  return String(s ?? "").replace(/\s+/g, " ").trim();
+}
+
+/** Сделка закрыта = статус «Успешно реализовано» (из столбца «Имя статуса»). Только эти сделки входят в продажи и ачивки. */
 export function isPaidDeal(row: InvoiceRow): boolean {
-  const s = String(row.status ?? "").trim();
-  return PAID_DEAL_STATUSES.some((stat) => stat === s);
+  const s = normalizeStatus(row.status ?? "");
+  return PAID_DEAL_STATUSES.some((stat) => normalizeStatus(stat) === s);
 }
 
 export interface CompanyRow {
@@ -46,6 +51,8 @@ export interface Totals {
   paid_sum_total: number;
   /** Итог по сумме продаж (бюджет) */
   budget_total?: number;
+  /** Общая маржа в рублях: сумма (продажа − закупка) по оплаченным счетам */
+  total_margin?: number;
 }
 
 export interface BucketMetrics {
@@ -68,6 +75,12 @@ export interface MetricsResult {
   totals: Totals;
   buckets: BucketMetrics[];
   cancelled: { count: number };
+  /** Максимальная сумма по бюджету (маржа) в одном календарном месяце за всё время */
+  max_monthly_budget?: number;
+  /** Максимальное количество продаж в одном календарном месяце за всё время */
+  max_monthly_paid_count?: number;
+  /** Сумма по бюджету в текущем месяце */
+  current_month_budget?: number;
   updated_at: string;
 }
 
@@ -82,6 +95,27 @@ export function getCompaniesCount(
   return uniqueIds.size;
 }
 
+/** Сравнение user_id с учётом пробелов и разных форматов ФИО */
+function userIdMatches(userId: string, invoiceUserId: string): boolean {
+  const a = String(userId ?? "").trim();
+  const b = String(invoiceUserId ?? "").trim();
+  if (!a || !b) return false;
+  if (a === b) return true;
+  // Один содержит другой: "Ружников Дмитрий" / "Ружников Дмитрий Константинович"
+  if (a.length >= 10 && b.length >= 10) {
+    if (a.startsWith(b) || b.startsWith(a)) return true;
+  }
+  return false;
+}
+
+/** Маржа в рублях: Сумма продажи − Сумма закупки */
+function calcMarginRub(row: InvoiceRow): number {
+  const sales = row.invoice_amount;
+  const purchase = row.purchase_amount;
+  if (sales == null || sales <= 0 || purchase == null || Number.isNaN(purchase)) return 0;
+  return Math.max(0, sales - purchase);
+}
+
 /** Средняя маржа в %: (Сумма продажи − Сумма закупки) / Сумма продажи × 100 */
 function calcMargin(row: InvoiceRow): number | undefined {
   const sales = row.invoice_amount; // Сумма продажи
@@ -94,7 +128,7 @@ export function computeTotals(
   invoices: InvoiceRow[],
   userId: string
 ): Totals & { paid_sum_total: number } {
-  const userInvoices = invoices.filter((i) => i.user_id === userId);
+  const userInvoices = invoices.filter((i) => userIdMatches(userId, i.user_id));
   const issued = userInvoices.filter(hasInvoiceIssued);
   const paid = userInvoices.filter(isPaidDeal);
 
@@ -102,6 +136,7 @@ export function computeTotals(
   const paid_total = paid.length;
   const paid_sum_total = paid.reduce((sum, i) => sum + i.invoice_amount, 0);
   const budget_total = paid.reduce((sum, i) => sum + (i.budget ?? i.invoice_amount), 0);
+  const total_margin = paid.reduce((sum, i) => sum + calcMarginRub(i), 0);
 
   let conversion_total = 0;
   if (issued_total > 0) {
@@ -119,6 +154,7 @@ export function computeTotals(
     cancelled_count: cancelled.length,
     paid_sum_total,
     budget_total,
+    total_margin,
   };
 }
 
@@ -126,7 +162,7 @@ export function aggregateByBuckets(
   invoices: InvoiceRow[],
   userId: string
 ): BucketMetrics[] {
-  const userInvoices = invoices.filter((i) => i.user_id === userId);
+  const userInvoices = invoices.filter((i) => userIdMatches(userId, i.user_id));
 
   return BUCKETS.map((bucket) => {
     const inBucket = userInvoices.filter(
@@ -167,6 +203,142 @@ export function aggregateByBuckets(
   });
 }
 
+/** Excel serial (дни с 1900-01-01) → JS Date */
+function excelSerialToDate(serial: number): Date | null {
+  const epoch = new Date(1899, 11, 30);
+  const ms = serial * 24 * 60 * 60 * 1000;
+  const d = new Date(epoch.getTime() + ms);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Извлекает год и месяц из даты. Возвращает "YYYY-MM" или null.
+ * Поддерживает: DD.MM.YYYY, YYYY-MM-DD, дата+время, Excel serial, ISO. */
+function getYearMonth(dateStr: string | undefined): string | null {
+  if (!dateStr || !String(dateStr).trim()) return null;
+  let s = String(dateStr).trim();
+  // Убираем время: "13.01.2025 14:30" → "13.01.2025", "2025-01-13T14:30" → "2025-01-13"
+  s = s.split(/[\sT]/)[0] ?? s;
+  // DD.MM.YYYY или DD/MM/YYYY
+  const ddmmyyyy = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
+  if (ddmmyyyy) {
+    const [, , month, year] = ddmmyyyy;
+    return `${year}-${String(month).padStart(2, "0")}`;
+  }
+  // YYYY-MM-DD или ISO
+  const iso = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (iso) {
+    const [, year, month] = iso;
+    return `${year}-${String(month).padStart(2, "0")}`;
+  }
+  // Excel serial (число в ячейке Google Sheets)
+  const excelSerial = parseFloat(s);
+  if (!Number.isNaN(excelSerial) && excelSerial > 0) {
+    const d = excelSerialToDate(excelSerial);
+    if (d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    }
+  }
+  try {
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return null;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Минимальный год для учёта сделок в ачивках (включительно) */
+const ACHIEVEMENTS_MIN_YEAR = 2024;
+
+/** Месячная статистика: закрытые сделки за период 1 месяца.
+ * — Статус: только «Успешно реализовано» (столбец «Имя статуса»).
+ * — Месяц: по столбцу «Дата завершения» (paid_date).
+ * — Учитываются только сделки с 2024 года.
+ * — Каскад: 10 сделок в месяце → выдают ачивки 5 и 10. */
+export function computeMonthlyStats(
+  invoices: InvoiceRow[],
+  userId: string
+): {
+  monthly_paid_count: number;
+  monthly_margin: number;
+  current_month_paid: number;
+  current_month_margin: number;
+  current_month_budget: number;
+  /** Количество закрытых сделок по месяцам (YYYY-MM) */
+  byMonth: Record<string, number>;
+} {
+  const userPaid = invoices.filter((i) => userIdMatches(userId, i.user_id) && isPaidDeal(i));
+  const byMonth = new Map<string, { count: number; margin: number; budget: number }>();
+
+  for (const inv of userPaid) {
+    const dateStr = String(inv.paid_date ?? inv.invoice_date ?? "").trim();
+    const key = getYearMonth(dateStr || undefined);
+    if (!key || key < `${ACHIEVEMENTS_MIN_YEAR}-01`) continue;
+    const cur = byMonth.get(key) ?? { count: 0, margin: 0, budget: 0 };
+    cur.count += 1;
+    cur.margin += calcMarginRub(inv);
+    cur.budget += inv.budget ?? inv.invoice_amount ?? 0;
+    byMonth.set(key, cur);
+  }
+
+  let maxCount = 0;
+  let maxMargin = 0;
+  const byMonthRecord: Record<string, number> = {};
+  for (const [k, { count, margin }] of byMonth) {
+    byMonthRecord[k] = count;
+    if (count > maxCount) maxCount = count;
+    if (margin > maxMargin) maxMargin = margin;
+  }
+
+  const now = new Date();
+  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const current = byMonth.get(currentKey) ?? { count: 0, margin: 0, budget: 0 };
+
+  return {
+    monthly_paid_count: maxCount,
+    monthly_margin: maxMargin,
+    current_month_paid: current.count,
+    current_month_margin: current.margin,
+    current_month_budget: current.budget,
+    byMonth: byMonthRecord,
+  };
+}
+
+/** Количество закрытых сделок за конкретный месяц (по «Дата завершения»). */
+export function getClosedCountForMonth(
+  invoices: InvoiceRow[],
+  userId: string,
+  monthKey: string
+): number {
+  const stats = computeMonthlyStats(invoices, userId);
+  return stats.byMonth[monthKey] ?? 0;
+}
+
+/** Максимальная сумма по бюджету (маржа) в одном календарном месяце. Сканирует все месяцы, возвращает рекорд. */
+export function computeMaxMonthlyBudget(
+  invoices: InvoiceRow[],
+  userId: string
+): number {
+  const userPaid = invoices.filter((i) => userIdMatches(userId, i.user_id) && isPaidDeal(i));
+  const byMonth = new Map<string, number>();
+
+  for (const inv of userPaid) {
+    const dateStr = String(inv.paid_date ?? inv.invoice_date ?? "").trim();
+    const key = getYearMonth(dateStr || undefined);
+    if (!key || key < `${ACHIEVEMENTS_MIN_YEAR}-01`) continue;
+    const budget = inv.budget ?? inv.invoice_amount ?? 0;
+    byMonth.set(key, (byMonth.get(key) ?? 0) + budget);
+  }
+
+  let max = 0;
+  for (const sum of byMonth.values()) {
+    if (sum > max) max = sum;
+  }
+  return max;
+}
+
 export function computeMetrics(
   companies: CompanyRow[],
   invoices: InvoiceRow[],
@@ -176,6 +348,10 @@ export function computeMetrics(
   const league = getLeague(companies_count);
   const totals = computeTotals(invoices, userId);
   const buckets = aggregateByBuckets(invoices, userId);
+  const max_monthly_budget = computeMaxMonthlyBudget(invoices, userId);
+  const monthlyStats = computeMonthlyStats(invoices, userId);
+  const max_monthly_paid_count = monthlyStats.monthly_paid_count;
+  const current_month_budget = monthlyStats.current_month_budget;
 
   return {
     user_id: userId,
@@ -184,6 +360,9 @@ export function computeMetrics(
     totals,
     buckets,
     cancelled: { count: totals.cancelled_count },
+    max_monthly_budget: max_monthly_budget > 0 ? max_monthly_budget : undefined,
+    max_monthly_paid_count: max_monthly_paid_count > 0 ? max_monthly_paid_count : undefined,
+    current_month_budget,
     updated_at: new Date().toISOString(),
   };
 }

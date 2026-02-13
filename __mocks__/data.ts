@@ -112,15 +112,15 @@ export const mockInvoicesNoPaid: MockInvoiceRow[] = [
   { user_id: "user_no_paid", invoice_id: "inv2", invoice_amount: 50000, invoice_date: "2024-01-02", status: "В работе" },
 ];
 
-/** Invoices: all 5 buckets, mixed statuses. Маржа = (продажа - закупка) / продажа * 100 */
+/** Invoices: all 5 buckets, mixed statuses. Маржа = (продажа - закупка) / продажа * 100. Статус «Успешно реализовано» = закрытая сделка. */
 export const mockInvoicesBuckets: MockInvoiceRow[] = [
-  { user_id: "demo_user", invoice_id: "inv1", invoice_amount: 25000, invoice_date: "2024-01-01", status: "PAID", paid_date: "2024-01-05", budget: 25000, purchase_amount: 20500 },
-  { user_id: "demo_user", invoice_id: "inv2", invoice_amount: 40000, invoice_date: "2024-01-02", status: "PAID", paid_date: "2024-01-06", budget: 40000, purchase_amount: 31200 },
-  { user_id: "demo_user", invoice_id: "inv3", invoice_amount: 100000, invoice_date: "2024-01-03", status: "PAID", paid_date: "2024-01-07", budget: 100000, purchase_amount: 75000 },
+  { user_id: "demo_user", invoice_id: "inv1", invoice_amount: 25000, invoice_date: "2024-01-01", status: "Успешно реализовано", paid_date: "2024-01-05", budget: 25000, purchase_amount: 20500 },
+  { user_id: "demo_user", invoice_id: "inv2", invoice_amount: 40000, invoice_date: "2024-01-02", status: "Успешно реализовано", paid_date: "2024-01-06", budget: 40000, purchase_amount: 31200 },
+  { user_id: "demo_user", invoice_id: "inv3", invoice_amount: 100000, invoice_date: "2024-01-03", status: "Успешно реализовано", paid_date: "2024-01-07", budget: 100000, purchase_amount: 75000 },
   { user_id: "demo_user", invoice_id: "inv4", invoice_amount: 150000, invoice_date: "2024-01-04", status: "В работе", budget: 150000, purchase_amount: 120000 },
-  { user_id: "demo_user", invoice_id: "inv5", invoice_amount: 350000, invoice_date: "2024-01-05", status: "PAID", paid_date: "2024-01-10", budget: 350000, purchase_amount: 252000 },
-  { user_id: "demo_user", invoice_id: "inv6", invoice_amount: 750000, invoice_date: "2024-01-06", status: "PAID", paid_date: "2024-01-12", budget: 750000, purchase_amount: 525000 },
-  { user_id: "demo_user", invoice_id: "inv7", invoice_amount: 1500000, invoice_date: "2024-01-07", status: "PAID", paid_date: "2024-01-15", budget: 1500000, purchase_amount: 1020000 },
+  { user_id: "demo_user", invoice_id: "inv5", invoice_amount: 350000, invoice_date: "2024-01-05", status: "Успешно реализовано", paid_date: "2024-01-10", budget: 350000, purchase_amount: 252000 },
+  { user_id: "demo_user", invoice_id: "inv6", invoice_amount: 750000, invoice_date: "2024-01-06", status: "Успешно реализовано", paid_date: "2024-01-12", budget: 750000, purchase_amount: 525000 },
+  { user_id: "demo_user", invoice_id: "inv7", invoice_amount: 1500000, invoice_date: "2024-01-07", status: "Успешно реализовано", paid_date: "2024-01-15", budget: 1500000, purchase_amount: 1020000 },
   { user_id: "demo_user", invoice_id: "inv8", invoice_amount: 3000000, invoice_date: "2024-01-08", status: "В работе", budget: 3000000, purchase_amount: 2250000 },
   { user_id: "demo_user", invoice_id: "", invoice_amount: 5000, invoice_date: "2024-01-09", status: "Отказ" },
   { user_id: "demo_user", invoice_id: "", invoice_amount: 80000, invoice_date: "2024-01-10", status: "Отказ" },
