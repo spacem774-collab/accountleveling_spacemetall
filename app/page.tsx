@@ -27,6 +27,7 @@ interface EmployeeItem {
   hard_skills: { emoji: string; letter: string; name: string };
   total_achievements?: number;
   contacts?: { phone?: string; email?: string; telegram?: string; instagram?: string };
+  tasks?: Array<{ id: string; type: "daily" | "weekly"; target: number; current: number; reward: number; completed: boolean; description?: string; unit?: string }>;
 }
 
 const DEFAULT_AVATARS: Record<string, string> = {
@@ -65,6 +66,32 @@ function getStartDate(emp: EmployeeItem): string | null {
 }
 
 const PREV_MONTH_NAMES = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+
+/** Вероятность выполнения плана в текущем месяце (0–100). На основе темпа: дней нужно vs дней осталось. */
+function getPlanProbability(current: number, plan: number): number | null {
+  if (plan <= 0 || current >= plan) return null;
+  const now = new Date();
+  const day = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysPassed = Math.max(1, day);
+  const dailyRate = current / daysPassed;
+  if (dailyRate <= 0) return null;
+  const remaining = plan - current;
+  const daysNeeded = remaining / dailyRate;
+  const daysLeft = Math.max(0, daysInMonth - day);
+  if (daysLeft <= 0) return 5;
+  const ratio = daysLeft / daysNeeded;
+  return Math.round(Math.min(95, Math.max(5, 100 * Math.min(1, ratio))));
+}
+
+/** Цвет по вероятности: меньше — краснее, больше — зеленее */
+function getProbabilityColorClass(prob: number): string {
+  if (prob >= 75) return "text-green-600";
+  if (prob >= 50) return "text-lime-600";
+  if (prob >= 30) return "text-amber-600";
+  if (prob >= 15) return "text-orange-600";
+  return "text-red-600";
+}
 
 function getPrevMonthLabel(): string {
   const now = new Date();
@@ -162,23 +189,23 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f5f6f8]">
-      <header className="bg-[#1A2F50] px-4 py-4 md:px-8 shadow-sm">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+      <header className="bg-[#1A2F50] px-4 py-3 md:py-4 md:px-8 shadow-sm">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 sm:gap-4 min-h-11">
           <Image
             src="/sm-logo.png"
             alt="Space METALL"
             width={140}
             height={40}
-            className="h-10 w-auto object-contain"
+            className="h-8 sm:h-10 w-auto object-contain flex-shrink-0"
           />
           {chelyabinskTime && (
-            <div className="text-white/90 text-sm font-medium">
+            <div className="text-white/90 text-xs sm:text-sm font-medium truncate max-w-[50vw] sm:max-w-none">
               Челябинск: {chelyabinskTime}
             </div>
           )}
         </div>
       </header>
-      <main className="flex-1 py-12 px-4 md:px-8">
+      <main className="flex-1 py-6 sm:py-12 px-3 sm:px-4 md:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="space-y-6 mb-8 max-w-2xl">
             <div>
@@ -190,18 +217,18 @@ export default function Home() {
               </p>
               {!loading && !error && (
                 <div className="mt-3 space-y-3 w-full">
-                  <div className="flex flex-wrap gap-3 w-full">
-                    <div className="flex-1 min-w-[200px] inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-[#e2e4e8] shadow-[0_0_6px_rgba(26,47,80,0.08)]">
-                      <span className="text-sm text-[#1A2F50]/70">Маржа за этот месяц:</span>
-                      <span className="font-bold text-[#1A2F50]">{formatMargin(totalCurrentMonthMargin)}</span>
+                  <div className="flex flex-wrap gap-2 sm:gap-3 w-full">
+                    <div className="flex-1 min-w-[min(100%,140px)] sm:min-w-[200px] inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg bg-white border border-[#e2e4e8] shadow-[0_0_6px_rgba(26,47,80,0.08)]">
+                      <span className="text-xs sm:text-sm text-[#1A2F50]/70">Маржа за этот месяц:</span>
+                      <span className="font-bold text-[#1A2F50] text-sm sm:text-base">{formatMargin(totalCurrentMonthMargin)}</span>
                     </div>
-                    <div className="flex-1 min-w-[200px] inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-[#e2e4e8] shadow-[0_0_6px_rgba(26,47,80,0.08)]">
-                      <span className="text-sm text-[#1A2F50]/70">Маржа за прошлый месяц:</span>
-                      <span className="font-bold text-[#1A2F50]">{formatMargin(totalPreviousMonthMargin)}</span>
+                    <div className="flex-1 min-w-[min(100%,140px)] sm:min-w-[200px] inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg bg-white border border-[#e2e4e8] shadow-[0_0_6px_rgba(26,47,80,0.08)]">
+                      <span className="text-xs sm:text-sm text-[#1A2F50]/70">Маржа за прошлый месяц:</span>
+                      <span className="font-bold text-[#1A2F50] text-sm sm:text-base">{formatMargin(totalPreviousMonthMargin)}</span>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-stretch gap-4 w-full">
-                    <div className="flex-1 min-w-0 bg-white rounded-lg border border-[#e2e4e8] p-4 shadow-[0_0_6px_rgba(26,47,80,0.08)]">
+                  <div className="flex flex-wrap items-stretch gap-3 sm:gap-4 w-full">
+                    <div className="flex-1 min-w-0 bg-white rounded-lg border border-[#e2e4e8] p-3 sm:p-4 shadow-[0_0_6px_rgba(26,47,80,0.08)]">
                       <div className="flex items-center justify-between text-sm text-[#1A2F50]/70 mb-2">
                         <span>План отдела на месяц</span>
                         <span className="font-medium text-[#1A2F50]">
@@ -226,9 +253,24 @@ export default function Home() {
                               />
                             </div>
                             {totalCurrentMonthBudget < plan && (
-                              <p className="text-xs text-[#1A2F50]/60 mt-1.5">
-                                Осталось: {formatMargin(plan - totalCurrentMonthBudget)}
-                              </p>
+                              <>
+                                <p className="text-xs text-[#1A2F50]/60 mt-1.5">
+                                  Осталось: {formatMargin(plan - totalCurrentMonthBudget)}
+                                </p>
+                                {(() => {
+                                  const prob = getPlanProbability(totalCurrentMonthBudget, plan);
+                                  return prob != null ? (
+                                    <div className="mt-2 pt-2 border-t border-[#1A2F50]/10">
+                                      <p className="text-sm text-[#1A2F50]/70">
+                                        Вероятность выполнения плана:{" "}
+                                        <span className={`font-semibold ${getProbabilityColorClass(prob)}`}>
+                                          {prob}%
+                                        </span>
+                                      </p>
+                                    </div>
+                                  ) : null;
+                                })()}
+                              </>
                             )}
                           </>
                         ) : (
@@ -239,7 +281,7 @@ export default function Home() {
                     {bestYearEmployee && (
                       <button
                         onClick={() => handleSelect(bestYearEmployee.user_id)}
-                        className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-white border-2 border-[#E6004B]/30 hover:border-[#E6004B]/60 hover:shadow-lg transition-all text-center min-w-[120px] self-stretch"
+                        className="flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl bg-white border-2 border-[#E6004B]/30 hover:border-[#E6004B]/60 active:border-[#E6004B]/80 hover:shadow-lg transition-all text-center min-w-[100px] sm:min-w-[120px] self-stretch min-h-[100px]"
                         title={`Лучший по марже в ${new Date().getFullYear()} г. — ${bestYearEmployee.user_id}`}
                       >
                         <div className="relative w-16 h-16 rounded-full overflow-hidden flex items-center justify-center bg-[#1A2F50]/10 border-2 border-[#E6004B]/40">
@@ -265,11 +307,11 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap gap-3 w-full">
-              <div className="relative flex-1 min-w-[200px]">
+            <div className="flex flex-wrap gap-2 sm:gap-3 w-full">
+              <div className="relative flex-1 min-w-[min(100%,140px)] sm:min-w-[200px]">
                 <button
                   onClick={() => setChannelsOpen((v) => !v)}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 border-[#0088cc]/60 bg-[#0088cc]/5 text-[#0088cc] font-medium hover:bg-[#0088cc]/10 transition-colors shadow-[0_0_6px_rgba(0,136,204,0.15)]"
+                  className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg border-2 border-[#0088cc]/60 bg-[#0088cc]/5 text-[#0088cc] font-medium hover:bg-[#0088cc]/10 active:bg-[#0088cc]/15 transition-colors shadow-[0_0_6px_rgba(0,136,204,0.15)] text-sm sm:text-base"
                 >
                   <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
@@ -282,12 +324,12 @@ export default function Home() {
                 {channelsOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setChannelsOpen(false)} aria-hidden />
-                    <div className="absolute top-full left-0 right-0 mt-2 py-2 bg-white rounded-lg border-2 border-[#0088cc]/30 shadow-xl z-50">
+                    <div className="absolute top-full left-0 right-0 mt-2 py-2 bg-white rounded-lg border-2 border-[#0088cc]/30 shadow-xl z-50 min-w-[200px]">
                       <a
                         href="https://t.me/+dJEMOEdZchRhNDVi"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2.5 text-left text-[#1A2F50] hover:bg-[#0088cc]/10 transition-colors"
+                        className="flex items-center gap-2 px-4 py-3 min-h-[44px] text-left text-[#1A2F50] hover:bg-[#0088cc]/10 active:bg-[#0088cc]/15 transition-colors"
                         onClick={() => setChannelsOpen(false)}
                       >
                         <span>История нашей компании</span>
@@ -299,7 +341,7 @@ export default function Home() {
                         href="https://t.me/+Aq13Cs45eS85MTky"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2.5 text-left text-[#1A2F50] hover:bg-[#0088cc]/10 transition-colors"
+                        className="flex items-center gap-2 px-4 py-3 min-h-[44px] text-left text-[#1A2F50] hover:bg-[#0088cc]/10 active:bg-[#0088cc]/15 transition-colors"
                         onClick={() => setChannelsOpen(false)}
                       >
                         <span>Канал для сотрудников</span>
@@ -313,7 +355,7 @@ export default function Home() {
               </div>
               <button
                 onClick={() => setMatcastOpen(true)}
-                className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 border-[#1A2F50] text-[#1A2F50] font-medium hover:bg-[#1A2F50]/5 transition-colors shadow-[0_0_6px_rgba(26,47,80,0.15)]"
+                className="flex-1 min-w-[min(100%,140px)] sm:min-w-[200px] min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg border-2 border-[#1A2F50] text-[#1A2F50] font-medium hover:bg-[#1A2F50]/5 active:bg-[#1A2F50]/10 transition-colors shadow-[0_0_6px_rgba(26,47,80,0.15)] text-sm sm:text-base"
               >
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -322,7 +364,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => setRulesOpen(true)}
-                className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 border-[#1A2F50] text-[#1A2F50] font-medium hover:bg-[#1A2F50]/5 transition-colors shadow-[0_0_6px_rgba(26,47,80,0.15)]"
+                className="flex-1 min-w-[min(100%,140px)] sm:min-w-[200px] min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg border-2 border-[#1A2F50] text-[#1A2F50] font-medium hover:bg-[#1A2F50]/5 active:bg-[#1A2F50]/10 transition-colors shadow-[0_0_6px_rgba(26,47,80,0.15)] text-sm sm:text-base"
               >
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -331,7 +373,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => setAttestationOpen(true)}
-                className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 border-[#1A2F50] text-[#1A2F50] font-medium hover:bg-[#1A2F50]/5 transition-colors shadow-[0_0_6px_rgba(26,47,80,0.15)]"
+                className="flex-1 min-w-[min(100%,140px)] sm:min-w-[200px] min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg border-2 border-[#1A2F50] text-[#1A2F50] font-medium hover:bg-[#1A2F50]/5 active:bg-[#1A2F50]/10 transition-colors shadow-[0_0_6px_rgba(26,47,80,0.15)] text-sm sm:text-base"
               >
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
@@ -368,7 +410,7 @@ export default function Home() {
           {bestPrevMonthEmployee && !loading && !error && (
             <button
               onClick={() => handleSelect(bestPrevMonthEmployee.user_id)}
-              className="mb-6 flex items-center gap-5 p-5 rounded-xl bg-gradient-to-r from-[#1A2F50]/10 to-[#E6004B]/10 border-2 border-[#E6004B]/30 hover:border-[#E6004B]/50 hover:scale-[1.01] transition-all text-left w-full max-w-2xl shadow-[0_0_16px_rgba(230,0,75,0.2)]"
+              className="mb-4 sm:mb-6 flex items-center gap-3 sm:gap-5 p-4 sm:p-5 rounded-xl bg-gradient-to-r from-[#1A2F50]/10 to-[#E6004B]/10 border-2 border-[#E6004B]/30 hover:border-[#E6004B]/50 active:border-[#E6004B]/60 sm:hover:scale-[1.01] transition-all text-left w-full max-w-2xl shadow-[0_0_16px_rgba(230,0,75,0.2)] min-h-[80px]"
             >
               <div className="flex flex-col items-center gap-1 min-w-[3rem]">
                 <div className="flex items-baseline gap-0.5">
@@ -411,7 +453,7 @@ export default function Home() {
           )}
 
           {!loading && !error && employees.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 max-w-2xl">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 max-w-2xl">
               {employees.map((emp, index) => {
                 const place = index + 1;
                 const avatarUrl = getAvatarUrl(emp);
@@ -424,12 +466,12 @@ export default function Home() {
                   <button
                     key={emp.user_id}
                     onClick={() => handleSelect(emp.user_id)}
-                    className="flex items-center gap-4 p-5 rounded-xl bg-white border-2 border-[#1A2F50] hover:scale-[1.01] transition-all text-left w-full shadow-[0_0_12px_rgba(26,47,80,0.2),0_0_6px_rgba(230,0,75,0.15)]"
+                    className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl bg-white border-2 border-[#1A2F50] hover:bg-[#1A2F50]/5 active:bg-[#1A2F50]/10 sm:hover:scale-[1.01] transition-all text-left w-full shadow-[0_0_12px_rgba(26,47,80,0.2),0_0_6px_rgba(230,0,75,0.15)] min-h-[80px]"
                   >
-                    <span className="flex-shrink-0 w-8 text-center text-[#1A2F50]/60 font-medium tabular-nums">
+                    <span className="flex-shrink-0 w-7 sm:w-8 text-center text-[#1A2F50]/60 font-medium tabular-nums text-sm sm:text-base">
                       {place}
                     </span>
-                    <div className="relative w-20 h-20 flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-[#1A2F50]/10 border-2 border-[#1A2F50] shadow-[0_0_6px_rgba(26,47,80,0.2),0_0_3px_rgba(230,0,75,0.15)]">
+                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-[#1A2F50]/10 border-2 border-[#1A2F50] shadow-[0_0_6px_rgba(26,47,80,0.2),0_0_3px_rgba(230,0,75,0.15)]">
                       {avatarUrl ? (
                         <img
                           src={avatarUrl}
@@ -443,10 +485,10 @@ export default function Home() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="font-semibold text-lg text-[#1A2F50] block truncate">
+                      <span className="font-semibold text-base sm:text-lg text-[#1A2F50] block truncate">
                         {emp.user_id}
                       </span>
-                      <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-[#1A2F50]/70">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-[#1A2F50]/70">
                         <span>{emp.companies_count} связок</span>
                         <span>·</span>
                         <span title="Общая маржа">{marginFormatted}</span>
@@ -470,6 +512,31 @@ export default function Home() {
                           <span className="text-[#E6004B]" aria-hidden>★</span>
                         </div>
                       </div>
+                      {emp.tasks && emp.tasks.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-[#1A2F50]/10">
+                          <p className="text-xs font-medium text-[#1A2F50]/60 mb-1.5">Задания</p>
+                          <div className="space-y-1.5">
+                            {emp.tasks.map((t) => (
+                              <div
+                                key={t.id}
+                                className={`flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg text-sm ${
+                                  t.completed
+                                    ? "bg-green-50 border border-green-200 text-green-800"
+                                    : "bg-[#1A2F50]/5 border border-[#1A2F50]/20 text-[#1A2F50]"
+                                }`}
+                              >
+                                <span className="flex-1 min-w-0 truncate">
+                                  {t.description ?? (t.type === "weekly" ? "Еженедельное" : "Ежедневное")}: {t.current}/{t.target}
+                                </span>
+                                <span className="flex-shrink-0 font-medium text-[#E6004B]">{t.reward.toLocaleString("ru-RU")} ₽</span>
+                                {t.completed && (
+                                  <span className="flex-shrink-0 text-green-600" aria-hidden>✓</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {(emp.contacts && (emp.contacts.phone || emp.contacts.email || emp.contacts.telegram || emp.contacts.instagram)) && (
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                           {emp.contacts.phone && (
@@ -524,20 +591,20 @@ export default function Home() {
           {/* Модальное окно условий */}
           {rulesOpen && (
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 overflow-y-auto"
               onClick={() => setRulesOpen(false)}
             >
               <div
-                className="bg-white rounded-xl border-2 border-[#1A2F50] shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+                className="bg-white rounded-t-xl sm:rounded-xl border-2 border-[#1A2F50] shadow-2xl max-w-lg w-full max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain mt-auto sm:mt-0"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="sticky top-0 bg-white border-b border-[#e2e4e8] px-6 py-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-[#1A2F50]">
+                <div className="sticky top-0 bg-white border-b border-[#e2e4e8] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between shrink-0">
+                  <h2 className="text-lg sm:text-xl font-semibold text-[#1A2F50] pr-2">
                     Условия лиг и рангов
                   </h2>
                   <button
                     onClick={() => setRulesOpen(false)}
-                    className="p-2 rounded-lg text-[#1A2F50]/70 hover:bg-[#1A2F50]/10 transition-colors"
+                    className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-[#1A2F50]/70 hover:bg-[#1A2F50]/10 active:bg-[#1A2F50]/20 transition-colors"
                     aria-label="Закрыть"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -545,7 +612,7 @@ export default function Home() {
                     </svg>
                   </button>
                 </div>
-                <div className="p-6 space-y-8">
+                <div className="p-4 sm:p-6 space-y-6 sm:space-y-8">
                   <section>
                     <h3 className="text-lg font-semibold text-[#1A2F50] mb-3 flex items-center gap-2">
                       <img src="/badges/bronze.png" alt="" className="w-6 h-6 object-contain" />
@@ -603,20 +670,20 @@ export default function Home() {
           {/* Модальное окно аттестации */}
           {attestationOpen && (
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 overflow-y-auto"
               onClick={() => setAttestationOpen(false)}
             >
               <div
-                className="bg-white rounded-xl border-2 border-[#1A2F50] shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+                className="bg-white rounded-t-xl sm:rounded-xl border-2 border-[#1A2F50] shadow-2xl max-w-lg w-full max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain mt-auto sm:mt-0"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="sticky top-0 bg-white border-b border-[#e2e4e8] px-6 py-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-[#1A2F50]">
+                <div className="sticky top-0 bg-white border-b border-[#e2e4e8] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between shrink-0">
+                  <h2 className="text-lg sm:text-xl font-semibold text-[#1A2F50] pr-2">
                     Аттестация сотрудника
                   </h2>
                   <button
                     onClick={() => setAttestationOpen(false)}
-                    className="p-2 rounded-lg text-[#1A2F50]/70 hover:bg-[#1A2F50]/10 transition-colors"
+                    className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-[#1A2F50]/70 hover:bg-[#1A2F50]/10 active:bg-[#1A2F50]/20 transition-colors"
                     aria-label="Закрыть"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

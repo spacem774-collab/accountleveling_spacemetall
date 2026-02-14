@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { fetchCompanies, fetchInvoices } from "@/lib/sheets";
-import { getCompaniesCount, computeTotals, computeMaxMonthlyBudget, computeMonthlyStats, computeTotalCurrentMonthMargin, computeTotalCurrentMonthBudget, computeTotalPreviousMonthMargin, getBestEmployeeByPreviousMonthMargin, getBestEmployeeByCurrentYearMargin } from "@/lib/metrics";
+import { getCompaniesCount, getCompaniesAddedInWeek, getPaidDealsInPeriod, computeTotals, computeMaxMonthlyBudget, computeMonthlyStats, computeTotalCurrentMonthMargin, computeTotalCurrentMonthBudget, computeTotalPreviousMonthMargin, getBestEmployeeByPreviousMonthMargin, getBestEmployeeByCurrentYearMargin } from "@/lib/metrics";
 import { getLeague, LEAGUES } from "@/config/league";
 import { getDepartmentPlan } from "@/config/plans";
 import { getHardSkillsRank } from "@/config/hardSkills";
 import { getContacts } from "@/config/contacts";
 import { countAchievements } from "@/lib/achievementsCatalog";
+import { getTasksForUser, userIdMatches, type TaskDefinition } from "@/config/tasks";
 
 /** Порядок лиг для сортировки: индекс в LEAGUES (Legend=6, Bronze=0) — выше индекс = выше приоритет */
 const LEAGUE_SORT_ORDER = Object.fromEntries(LEAGUES.map((l, i) => [l.id, i]));
@@ -37,6 +38,16 @@ export interface EmployeeItem {
   total_achievements: number;
   /** Контактные данные */
   contacts?: { phone?: string; email?: string; telegram?: string; instagram?: string };
+  /** Ежедневные и еженедельные задания */
+  tasks?: Array<{
+    id: string;
+    type: "daily" | "weekly";
+    target: number;
+    current: number;
+    reward: number;
+    completed: boolean;
+    description?: string;
+  }>;
 }
 
 function getExcludedUserIds(): string[] {
@@ -75,6 +86,32 @@ export async function GET() {
         maxMonthlyBudget,
         maxMonthlySales
       );
+      const taskDefs = getTasksForUser(userId);
+      const metricUserId = (t: TaskDefinition) =>
+        t.mentee_user_id_match ? userIds.find((id) => userIdMatches(t.mentee_user_id_match!, id)) ?? userId : userId;
+      const tasks = taskDefs.map((t: TaskDefinition) => {
+        const uid = metricUserId(t);
+        let current = 0;
+        if (t.metric === "connections") {
+          const count = uid === userId ? companies_count : getCompaniesCount(companies, uid);
+          current =
+            t.baseline != null
+              ? Math.max(0, count - t.baseline)
+              : (t.week_start ? getCompaniesAddedInWeek(companies, uid, t.week_start, t.week_end) : 0);
+        } else if (t.metric === "paid_deals") {
+          current = getPaidDealsInPeriod(invoices, uid, t.week_start!, t.week_end);
+        }
+        return {
+          id: t.id,
+          type: t.type,
+          target: t.target,
+          current,
+          reward: t.reward,
+          completed: current >= t.target,
+          description: t.description,
+          unit: t.metric === "paid_deals" ? "сделок" : "связок",
+        };
+      });
       return {
         user_id: userId,
         companies_count,
@@ -92,6 +129,7 @@ export async function GET() {
         },
         total_achievements,
         contacts: getContacts(userId) ?? undefined,
+        tasks: tasks.length > 0 ? tasks : undefined,
       };
     });
 

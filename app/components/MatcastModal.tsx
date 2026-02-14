@@ -119,20 +119,20 @@ export default function MatcastModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-4xl max-h-[90vh] rounded-xl overflow-hidden shadow-2xl flex flex-col bg-white border-2 border-[#1A2F50]"
+        className="w-full max-w-4xl max-h-[90vh] sm:max-h-[90vh] rounded-t-xl sm:rounded-xl overflow-hidden shadow-2xl flex flex-col bg-white border-2 border-[#1A2F50] mt-auto sm:mt-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between px-6 py-4 shrink-0 bg-[#1A2F50]">
-          <h2 className="text-lg font-bold text-white uppercase tracking-wide">
+        <header className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 shrink-0 bg-[#1A2F50]">
+          <h2 className="text-base sm:text-lg font-bold text-white uppercase tracking-wide truncate pr-2">
             Матчасть SPACEMETALL
           </h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 active:bg-white/20 transition-colors shrink-0"
             aria-label="Закрыть"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,11 +141,11 @@ export default function MatcastModal({ onClose }: { onClose: () => void }) {
           </button>
         </header>
 
-        <div className="flex flex-1 min-h-0 bg-[#f5f6f8]">
-          <nav className="w-52 shrink-0 border-r border-[#e2e4e8] overflow-y-auto py-4 bg-white">
-            <ul className="space-y-0.5 px-2 text-left">
+        <div className="flex flex-1 min-h-0 flex-col sm:flex-row bg-[#f5f6f8]">
+          <nav className="w-full sm:w-52 shrink-0 border-b sm:border-b-0 sm:border-r border-[#e2e4e8] overflow-x-auto overflow-y-hidden sm:overflow-y-auto py-2 sm:py-4 bg-white flex sm:flex-col gap-0 sm:gap-0">
+            <ul className="flex flex-row sm:flex-col flex-nowrap sm:flex-wrap gap-1 sm:gap-0 sm:space-y-0.5 px-2 py-2 sm:py-0 text-left overflow-x-auto sm:overflow-visible">
               {MATCAST_SECTIONS.map((s) => (
-                <li key={s.id}>
+                <li key={s.id} className="shrink-0 sm:shrink">
                   {s.externalLink ? (
                     <a
                       href={s.externalLink}
@@ -181,7 +181,7 @@ export default function MatcastModal({ onClose }: { onClose: () => void }) {
             </ul>
           </nav>
 
-          <main className="flex-1 overflow-y-auto p-6 bg-white text-left">
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white text-left min-h-0">
             {active && !active.externalLink && (
               <>
                 <h3 className="text-xl font-bold text-[#1A2F50] mb-4 text-left">{active.title}</h3>

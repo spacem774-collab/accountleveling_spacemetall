@@ -92,10 +92,109 @@ export function getCompaniesCount(
   userId: string
 ): number {
   const withContact = companies.filter(
-    (c) => c.user_id === userId && c.contact_name.trim() !== ""
+    (c) => (c.user_id === userId || companyUserIdMatches(userId, c.user_id)) && c.contact_name.trim() !== ""
   );
   const uniqueIds = new Set(withContact.map((c) => c.company_id));
   return uniqueIds.size;
+}
+
+/** Сопоставление user_id для компаний (частичное совпадение) */
+function companyUserIdMatches(userId: string, companyUserId: string): boolean {
+  const a = String(userId ?? "").trim();
+  const b = String(companyUserId ?? "").trim();
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.length >= 10 && b.length >= 10 && (a.startsWith(b) || b.startsWith(a))) return true;
+  return false;
+}
+
+/** Парсит дату из строки. Таблицы хранят дату с временем (14:30 и т.п.) — время отбрасывается.
+ * Поддерживает: "20.02.2026 14:30", "2026-02-20T14:30:00", DD.MM.YYYY, YYYY-MM-DD, ISO, Excel serial. */
+function parseDateToDate(dateStr: string | undefined): Date | null {
+  if (!dateStr || !String(dateStr).trim()) return null;
+  const s = String(dateStr).trim().split(/[\sT,]/)[0] ?? "";
+  const ddmmyyyy = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
+  if (ddmmyyyy) {
+    const [, day, month, year] = ddmmyyyy;
+    const d = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const iso = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (iso) {
+    const [, year, month, day] = iso;
+    const d = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const excelSerial = parseFloat(s);
+  if (!Number.isNaN(excelSerial) && excelSerial > 0) {
+    const epoch = new Date(1899, 11, 30);
+    const d = new Date(epoch.getTime() + excelSerial * 24 * 60 * 60 * 1000);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  try {
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
+}
+
+/** Количество новых связок (компаний с контактом) за период.
+ * Включает только связки с created_at в диапазоне [weekStart, weekEnd] включительно.
+ * Связки с датой после weekEnd не засчитываются. */
+export function getCompaniesAddedInWeek(
+  companies: CompanyRow[],
+  userId: string,
+  weekStart: string,
+  weekEnd?: string
+): number {
+  const [y, m, d] = weekStart.split("-").map(Number);
+  const start = new Date(y, m - 1, d);
+  let end: Date;
+  if (weekEnd) {
+    const [ey, em, ed] = weekEnd.split("-").map(Number);
+    end = new Date(ey, em - 1, ed, 23, 59, 59);
+  } else {
+    end = new Date(y, m - 1, d + 6, 23, 59, 59);
+  }
+  if (Number.isNaN(start.getTime())) return 0;
+
+  const seen = new Set<string>();
+  for (const c of companies) {
+    if (!companyUserIdMatches(userId, c.user_id) || !c.contact_name.trim()) continue;
+    const parsed = parseDateToDate(c.created_at);
+    if (!parsed || parsed < start || parsed > end) continue;
+    seen.add(c.company_id || c.company_name || "");
+  }
+  return seen.size;
+}
+
+/** Количество закрытых сделок («Успешно реализовано») по дате завершения за период.
+ * Учитываются только сделки с paid_date в диапазоне [weekStart, weekEnd]. Даты в таблицах с временем — парсятся. */
+export function getPaidDealsInPeriod(
+  invoices: InvoiceRow[],
+  userId: string,
+  weekStart: string,
+  weekEnd?: string
+): number {
+  const [y, m, d] = weekStart.split("-").map(Number);
+  const start = new Date(y, m - 1, d);
+  let end: Date;
+  if (weekEnd) {
+    const [ey, em, ed] = weekEnd.split("-").map(Number);
+    end = new Date(ey, em - 1, ed, 23, 59, 59);
+  } else {
+    end = new Date(y, m - 1, d + 6, 23, 59, 59);
+  }
+  if (Number.isNaN(start.getTime())) return 0;
+
+  return invoices.filter((inv) => {
+    if (!userIdMatches(userId, inv.user_id) || !isPaidDeal(inv)) return false;
+    const dateStr = String(inv.paid_date ?? inv.invoice_date ?? "").trim();
+    const parsed = parseDateToDate(dateStr);
+    if (!parsed || parsed < start || parsed > end) return false;
+    return true;
+  }).length;
 }
 
 /** Сравнение user_id с учётом пробелов и разных форматов ФИО */

@@ -7,6 +7,32 @@ import { getMonthlyPlan } from "@/config/plans";
 import { getContacts } from "@/config/contacts";
 import { MARGIN_ACHIEVEMENTS_CATALOG, MAX_MONTHLY_BUDGET_CATALOG, MAX_MONTHLY_SALES_CATALOG } from "@/lib/achievementsCatalog";
 
+/** Вероятность выполнения плана в текущем месяце (0–100). На основе темпа: дней нужно vs дней осталось. */
+function getPlanProbability(current: number, plan: number): number | null {
+  if (plan <= 0 || current >= plan) return null;
+  const now = new Date();
+  const day = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysPassed = Math.max(1, day);
+  const dailyRate = current / daysPassed;
+  if (dailyRate <= 0) return null;
+  const remaining = plan - current;
+  const daysNeeded = remaining / dailyRate;
+  const daysLeft = Math.max(0, daysInMonth - day);
+  if (daysLeft <= 0) return 5;
+  const ratio = daysLeft / daysNeeded;
+  return Math.round(Math.min(95, Math.max(5, 100 * Math.min(1, ratio))));
+}
+
+/** Цвет по вероятности: меньше — краснее, больше — зеленее */
+function getProbabilityColorClass(prob: number): string {
+  if (prob >= 75) return "text-green-600";
+  if (prob >= 50) return "text-lime-600";
+  if (prob >= 30) return "text-amber-600";
+  if (prob >= 15) return "text-orange-600";
+  return "text-red-600";
+}
+
 interface League {
   id: string;
   name: string;
@@ -57,6 +83,7 @@ interface MetricsData {
   about_text?: string;
   about_updated_at?: string | null;
   avatar_url?: string | null;
+  tasks?: Array<{ id: string; type: "daily" | "weekly"; target: number; current: number; reward: number; completed: boolean; description?: string; unit?: string }>;
 }
 
 function formatNumber(n: number): string {
@@ -267,11 +294,11 @@ function DashboardContent() {
   return (
     <div className="min-h-screen flex flex-col">
       <DashboardHeader />
-      <main className="flex-1 py-8 px-4 bg-[#f5f6f8]">
+      <main className="flex-1 py-4 sm:py-8 px-3 sm:px-4 bg-[#f5f6f8] overflow-x-hidden">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* 1. Карточка профиля: фото + иконка ранга */}
         <section
-          className="rounded-xl p-6 shadow-md border-2 flex items-center gap-5 bg-white"
+          className="rounded-xl p-4 sm:p-6 shadow-md border-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-5 bg-white"
           style={{ borderColor: "#1A2F50" }}
         >
           {/* Фото сотрудника с загрузкой */}
@@ -284,7 +311,7 @@ function DashboardContent() {
               disabled={avatarUploading}
             />
             <div
-              className="relative w-24 h-24 rounded-full overflow-hidden bg-[#1A2F50]/10 flex items-center justify-center transition-all"
+              className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-[#1A2F50]/10 flex items-center justify-center transition-all shrink-0"
               style={{
                 border: "3px solid #1A2F50",
                 boxShadow: "0 0 12px rgba(26,47,80,0.4)",
@@ -312,7 +339,7 @@ function DashboardContent() {
           </label>
 
           {/* Иконка ранга (подгружается автоматически по companies_count) */}
-          <div className="w-20 h-20 flex-shrink-0 flex items-center justify-center">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 flex items-center justify-center">
             <img
               src={league.badge_image_path}
               alt={`Ранг ${league.name}`}
@@ -321,7 +348,7 @@ function DashboardContent() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-[#1A2F50]">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#1A2F50]">
               {league.name}
             </h1>
             <p className="text-[#1A2F50]/70 mt-1">
@@ -343,6 +370,51 @@ function DashboardContent() {
                       width: `${Math.min(100, ((data.current_month_budget ?? 0) / getMonthlyPlan(data.user_id)) * 100)}%`,
                     }}
                   />
+                </div>
+                {(() => {
+                  const current = data.current_month_budget ?? 0;
+                  const plan = getMonthlyPlan(data.user_id);
+                  const prob = getPlanProbability(current, plan);
+                  return prob != null ? (
+                    <div className="mt-2 pt-2 border-t border-[#1A2F50]/10">
+                      <p className="text-sm text-[#1A2F50]/70">
+                        Вероятность выполнения плана:{" "}
+                        <span className={`font-semibold ${getProbabilityColorClass(prob)}`}>
+                          {prob}%
+                        </span>
+                      </p>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            )}
+            {data.tasks && data.tasks.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-[#1A2F50]/20">
+                <p className="text-xs font-medium text-[#1A2F50]/60 mb-2">Задания</p>
+                <div className="space-y-2">
+                  {data.tasks.map((t) => (
+                    <div
+                      key={t.id}
+                      className={`flex items-center justify-between gap-3 py-2 px-3 rounded-lg ${
+                        t.completed
+                          ? "bg-green-50 border border-green-200 text-green-800"
+                          : "bg-[#1A2F50]/5 border border-[#1A2F50]/20 text-[#1A2F50]"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">
+                          {t.description ?? (t.type === "weekly" ? "Еженедельное" : "Ежедневное")}
+                        </p>
+                        <p className="text-xs opacity-80 mt-0.5">
+                          {t.current} / {t.target} {t.unit ?? "связок"}
+                        </p>
+                      </div>
+                      <span className="flex-shrink-0 font-semibold text-[#E6004B]">{t.reward.toLocaleString("ru-RU")} ₽</span>
+                      {t.completed && (
+                        <span className="flex-shrink-0 text-green-600 text-lg" aria-hidden>✓</span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -385,7 +457,7 @@ function DashboardContent() {
         </section>
 
         {/* 2. Achievements — объединённый блок */}
-        <section className="bg-white rounded-xl p-6 shadow-md border border-[#e2e4e8]">
+        <section className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-[#e2e4e8]">
           {(() => {
             const paidTotal = totals.paid_total ?? 0;
             const maxSales = data.max_monthly_paid_count ?? 0;
@@ -572,7 +644,7 @@ function DashboardContent() {
         </section>
 
         {/* 3. Общая статистика */}
-        <section className="bg-white rounded-xl p-6 shadow-md border border-[#e2e4e8]">
+        <section className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-[#e2e4e8]">
           <h2 className="text-lg font-semibold mb-4 text-[#1A2F50]">Общая статистика</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-[#1A2F50]/5 rounded-lg p-4 border border-[#1A2F50]/10">
@@ -601,12 +673,12 @@ function DashboardContent() {
         </section>
 
         {/* 4. Таблица по бакетам */}
-        <section className="bg-white rounded-xl p-6 shadow-md overflow-x-auto border border-[#e2e4e8]">
+        <section className="bg-white rounded-xl p-4 sm:p-6 shadow-md overflow-x-auto border border-[#e2e4e8]">
           <h2 className="text-lg font-semibold mb-4 text-[#1A2F50]">Продажи по диапазонам</h2>
-          <table className="w-full text-left">
+          <table className="w-full text-left text-sm sm:text-base min-w-[500px]">
             <thead>
               <tr className="border-b-2 border-[#1A2F50]/20">
-                <th className="py-3 px-4 font-medium text-[#1A2F50]">Диапазон</th>
+                <th className="py-2 sm:py-3 px-2 sm:px-4 font-medium text-[#1A2F50]">Диапазон</th>
                 <th className="py-3 px-4 font-medium text-[#1A2F50]">Выставлено</th>
                 <th className="py-3 px-4 font-medium text-[#1A2F50]">Оплачено</th>
                 <th className="py-3 px-4 font-medium text-[#1A2F50]">Конверсия</th>
@@ -639,7 +711,7 @@ function DashboardContent() {
         </section>
 
         {/* 5. Отменённые счета */}
-        <section className="bg-white rounded-xl p-6 shadow-md border border-[#e2e4e8]">
+        <section className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-[#e2e4e8]">
           <h2 className="text-lg font-semibold mb-2 text-[#1A2F50]">Отменённые счета</h2>
           <p className="text-[#1A2F50]/70">
             Всего отменено: <strong>{formatNumber(cancelled.count)}</strong>
@@ -647,7 +719,7 @@ function DashboardContent() {
         </section>
 
         {/* 6. О себе */}
-        <section className="bg-white rounded-xl p-6 shadow-md border border-[#e2e4e8]">
+        <section className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-[#e2e4e8]">
           <h2 className="text-lg font-semibold mb-1 text-[#1A2F50]">О себе</h2>
           <p className="text-sm text-[#1A2F50]/60 mb-4">
             Напишите о сильных сторонах в работе, номенклатуре которую знаете, хобби, спорте и т.п.
@@ -699,7 +771,7 @@ function DashboardContent() {
 
 function DashboardHeader() {
   return (
-    <header className="bg-[#1A2F50] px-4 py-4 md:px-8 shadow-sm">
+    <header className="bg-[#1A2F50] px-3 sm:px-4 py-3 sm:py-4 md:px-8 shadow-sm">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <a href="/" className="flex items-center gap-3">
           <img
